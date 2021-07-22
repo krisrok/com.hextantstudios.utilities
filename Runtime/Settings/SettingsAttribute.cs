@@ -9,7 +9,7 @@ namespace Hextant
     public sealed class SettingsAttribute : Attribute
     {
         public SettingsAttribute( SettingsUsage usage, string displayPath = null,
-            string filename = null )
+            string filename = null)
         {
             this.usage = usage;
             this.filename = filename;
@@ -26,5 +26,10 @@ namespace Hextant
 
         // The filename used to store the settings. If null, the type's name is used.
         public readonly string filename;
+
+        /// <summary>
+        /// Set to true to try loading overrides from a <see>filename</see>.json placed in the working directory
+        /// </summary>
+        public bool allowRuntimeFileOverrides { get; set; }
     }
 }

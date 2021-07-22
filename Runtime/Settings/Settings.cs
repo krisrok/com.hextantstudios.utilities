@@ -6,6 +6,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using System.Xml;
+using System.Xml.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using System.Linq;
 
 namespace Hextant
 {
@@ -49,9 +54,28 @@ namespace Hextant
             else
                 _instance = AssetDatabase.LoadAssetAtPath<T>( path );
 
-            // Return the instance if it was the load was successful.
-            if( _instance != null ) return _instance;
+            if( _instance == null )
+                TryLocateAndMoveAsset( path );
+#endif
 
+            // Create the settings instance if it was not loaded or found.
+            if( _instance == null )
+                CreateAsset( path );
+
+            // Load runtime overrides from json file if it's allowed and we're actually in runtime.
+            if( attribute.allowRuntimeFileOverrides
+#if UNITY_EDITOR
+              && EditorApplication.isPlayingOrWillChangePlaymode
+#endif
+            )
+                TryLoadRuntimeFileOverrides( filename );
+
+            return _instance;
+        }
+
+#if UNITY_EDITOR
+        private static void TryLocateAndMoveAsset( string path )
+        {
             // Move settings if its path changed (type renamed or attribute changed)
             // while the editor was running. This must be done manually if the
             // change was made outside the editor.
@@ -61,15 +85,17 @@ namespace Hextant
                 var oldPath = AssetDatabase.GetAssetPath( instances[ 0 ] );
                 var result = AssetDatabase.MoveAsset( oldPath, path );
                 if( string.IsNullOrEmpty( result ) )
-                    return _instance = instances[ 0 ];
+                    _instance = instances[ 0 ];
                 else
                     Debug.LogWarning( $"Failed to move previous settings asset " +
                         $"'{oldPath}' to '{path}'. " +
                         $"A new settings asset will be created.", _instance );
             }
+        }
 #endif
-            // Create the settings instance if it was not loaded or found.
-            if( _instance != null ) return _instance;
+
+        private static void CreateAsset( string path )
+        {
             _instance = CreateInstance<T>();
 
 #if UNITY_EDITOR
@@ -82,7 +108,98 @@ namespace Hextant
             // Create the asset only in the editor.
             AssetDatabase.CreateAsset( _instance, path );
 #endif
-            return _instance;
+        }
+
+        private static void TryLoadRuntimeFileOverrides( string filename )
+        {
+            if( attribute.usage != SettingsUsage.RuntimeProject )
+            {
+                Debug.LogError( $"{nameof( SettingsAttribute )}.{nameof( SettingsAttribute.allowRuntimeFileOverrides )}=true can only be combined with {nameof( SettingsAttribute.usage )}={SettingsUsage.RuntimeProject}", _instance );
+                return;
+            }
+
+            var xmlFilename = filename + ".xml";
+            if( File.Exists( xmlFilename ) )
+            {
+                var xml = File.ReadAllText( xmlFilename );
+                var doc = new XmlDocument();
+                doc.LoadXml( xml );
+
+                var json = JsonConvert.SerializeXmlNode( doc, Newtonsoft.Json.Formatting.None, omitRootObject: true );
+
+                CreateRuntimeInstanceWithOverrides( json );
+            }
+
+            var jsonFilename = filename + ".json";
+            if( File.Exists( jsonFilename ) )
+            {
+                var json = File.ReadAllText( jsonFilename );
+
+                CreateRuntimeInstanceWithOverrides( json );
+            }
+        }
+
+        private static void CreateRuntimeInstanceWithOverrides( string json )
+        {
+            var runtimeInstanceName = _instance.name + " (Runtime instance with overrides from file)";
+            var runtimeInstance = ScriptableObject.Instantiate( _instance );
+            runtimeInstance.name = runtimeInstanceName;
+
+            JsonConvert.PopulateObject( json, runtimeInstance );
+
+            _instance = runtimeInstance;
+
+#if UNITY_EDITOR
+            EditorApplication.playModeStateChanged += EditorApplication_playModeStateChanged;
+#endif
+        }
+
+        private static void SaveToJsonFile( string filename )
+        {
+            var jsonFilename = filename + ".json";
+
+            using( var fs = File.CreateText( jsonFilename ) )
+            {
+                fs.Write( JsonConvert.SerializeObject( _instance, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { ContractResolver = UnityEngineObjectContractResolver.instance } ) );
+            }
+        }
+
+        private class UnityEngineObjectContractResolver : DefaultContractResolver
+        {
+            public static UnityEngineObjectContractResolver instance { get; } = new UnityEngineObjectContractResolver();
+
+            private UnityEngineObjectContractResolver() { }
+
+            private static string[] _ignoredMemberNames = new[] { nameof( UnityEngine.Object.name ), nameof( UnityEngine.Object.hideFlags ) };
+
+            protected override JsonProperty CreateProperty( MemberInfo member, MemberSerialization memberSerialization )
+            {
+                var property = base.CreateProperty( member, memberSerialization );
+
+                if( property.Ignored )
+                    return property;
+
+                if( member.DeclaringType == typeof( UnityEngine.Object ) && _ignoredMemberNames.Contains( member.Name ) )
+                    property.Ignored = true;
+
+                return property;
+            }
+        }
+
+        private static void SaveToXmlFile( string filename )
+        {
+            var xmlFilename = filename + ".xml";
+
+            var overrides = new XmlAttributeOverrides();
+            var ignoreAttributes = new XmlAttributes { XmlIgnore = true };
+            overrides.Add( typeof( UnityEngine.Object ), nameof( name ), ignoreAttributes );
+            overrides.Add( typeof( UnityEngine.Object ), nameof( hideFlags ), ignoreAttributes );
+
+            using( var fs = new FileStream( xmlFilename, FileMode.Create ) )
+            {
+                var xs = new XmlSerializer( typeof( T ), overrides );
+                xs.Serialize( fs, _instance );
+            }
         }
 
         // Returns the full asset path to the settings file.
@@ -114,17 +231,19 @@ namespace Hextant
         // Called to validate settings changes.
         protected virtual void OnValidate() { }
 
-#if UNITY_EDITOR
         // Sets the specified setting to the desired value and marks the settings
         // so that it will be saved.
         protected void Set<S>( ref S setting, S value )
         {
             if( EqualityComparer<S>.Default.Equals( setting, value ) ) return;
             setting = value;
+#if UNITY_EDITOR
             OnValidate();
             SetDirty();
+#endif
         }
 
+#if UNITY_EDITOR
         // Marks the settings dirty so that it will be saved.
         protected new void SetDirty() => EditorUtility.SetDirty( this );
 
@@ -133,6 +252,18 @@ namespace Hextant
         {
             var path = Application.dataPath.Split( '/' );
             return path[ path.Length - 2 ];
+        }
+
+        // Check if we are leaving play mode and reinitialize to revert from runtime instance.
+        private static void EditorApplication_playModeStateChanged( PlayModeStateChange stateChange )
+        {
+            if( stateChange != PlayModeStateChange.ExitingPlayMode )
+                return;
+
+            EditorApplication.playModeStateChanged -= EditorApplication_playModeStateChanged;
+
+            _instance = null;
+            Initialize();
         }
 #endif
 
@@ -143,17 +274,17 @@ namespace Hextant
             // Called when a setting is modified.
             protected virtual void OnValidate() { }
 
-#if UNITY_EDITOR
             // Sets the specified setting to the desired value and marks the settings
             // instance so that it will be saved.
             protected void Set<S>( ref S setting, S value )
             {
                 if( EqualityComparer<S>.Default.Equals( setting, value ) ) return;
                 setting = value;
+#if UNITY_EDITOR
                 OnValidate();
                 instance.SetDirty();
-            }
 #endif
+            }
         }
     }
 }

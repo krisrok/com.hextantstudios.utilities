@@ -12,5 +12,8 @@
     "name": "Hextant Studios",
     "email": "Doug@HextantStudios.com",
     "url": "https://HextantStudios.com"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "1.0.0"
   }
 }
