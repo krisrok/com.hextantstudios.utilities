@@ -1,5 +1,6 @@
 // Copyright 2021 by Hextant Studios. https://HextantStudios.com
 // This work is licensed under CC BY 4.0. http://creativecommons.org/licenses/by/4.0/
+using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,24 +12,24 @@ namespace Hextant.Editor
     // derived class.
     public class ScriptableObjectSettingsProvider : SettingsProvider
     {
-        public ScriptableObjectSettingsProvider( ScriptableObject settings,
+        public ScriptableObjectSettingsProvider( Func<ScriptableObject> settingsGetter,
             SettingsScope scope, string displayPath ) :
-            base( displayPath, scope ) => this.settings = settings;
+            base( displayPath, scope ) => _settingsGetter = settingsGetter;
+
+        private readonly Func<ScriptableObject> _settingsGetter;
 
         // The settings instance being edited.
-        public readonly ScriptableObject settings;
+        private ScriptableObject _settings;
 
-        // The SerializedObject settings instance.
-        public SerializedObject serializedSettings =>
-            _serializedSettings != null ? _serializedSettings :
-            _serializedSettings = new SerializedObject( settings );
-        SerializedObject _serializedSettings;
+        private bool _isRuntimeInstance;
 
         // Called when the settings are displayed in the UI.
         public override void OnActivate( string searchContext,
             UnityEngine.UIElements.VisualElement rootElement )
         {
-            _editor = Editor.CreateEditor( settings );
+            _settings = _settingsGetter();
+            _isRuntimeInstance = string.IsNullOrEmpty( AssetDatabase.GetAssetPath( _settings ) );
+            _editor = Editor.CreateEditor( _settings );
             base.OnActivate( searchContext, rootElement );
         }
 
@@ -43,7 +44,7 @@ namespace Hextant.Editor
         // Displays the settings.
         public override void OnGUI( string searchContext )
         {
-            if( settings == null || _editor == null ) return;
+            if( _settingsGetter == null || _editor == null ) return;
 
             // Set label width and indentation to match other settings.
             EditorGUIUtility.labelWidth = 250;
@@ -52,8 +53,19 @@ namespace Hextant.Editor
             GUILayout.BeginVertical();
             GUILayout.Space( 10 );
 
+            if( _isRuntimeInstance )
+            {
+                GUI.Label( EditorGUILayout.GetControlRect(), "Settings are not editable!", EditorStyles.boldLabel );
+                GUI.Label( EditorGUILayout.GetControlRect(), "Overrides may have been loaded from file." );
+                EditorGUI.BeginDisabledGroup( true );
+                GUILayout.Space( 10 );
+            }
+
             // Draw the editor's GUI.
             _editor.OnInspectorGUI();
+
+            if( _isRuntimeInstance )
+                EditorGUI.EndDisabledGroup();
 
             // Reset label width and indent.
             GUILayout.EndVertical();
@@ -66,8 +78,10 @@ namespace Hextant.Editor
         {
             if( !_keywordsBuilt )
             {
-                keywords = GetSearchKeywordsFromSerializedObject(
-                    serializedSettings );
+                using( var serializedSettings = new SerializedObject( _settingsGetter() ) )
+                {
+                    keywords = GetSearchKeywordsFromSerializedObject( serializedSettings );
+                }
                 _keywordsBuilt = true;
             }
             return base.HasSearchInterest( searchContext );
