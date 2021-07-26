@@ -69,7 +69,6 @@ namespace Hextant
             _instance = null;
             Initialize();
         }
-
 #endif
 
         public string SaveAsJsonFile( string filename = null )

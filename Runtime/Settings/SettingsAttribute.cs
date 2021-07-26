@@ -53,7 +53,8 @@ namespace Hextant
     public interface IRuntimeSettingsAttribute
     {
         /// <summary>
-        /// Set to true to try loading overrides from a <see>filename</see>.json placed in the working directory when entering runtime
+        /// Set to true to try loading overrides from a <see>filename</see>.json placed in the working directory when entering runtime.
+        /// Works in conjunction with <see cref="SerializableSettings{T}"/>
         /// </summary>
         bool allowRuntimeFileOverrides { get; set; }
     }
