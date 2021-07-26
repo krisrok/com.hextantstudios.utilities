@@ -12,10 +12,7 @@ namespace Hextant
             string filename = null)
         {
             this.usage = usage;
-            this.filename = filename;
-            this.displayPath = displayPath != null ?
-                ( ( usage == SettingsUsage.EditorUser ?
-                "Preferences/" : "Project/" ) + displayPath ) : null;
+            this.displayPath = displayPath;
         }
 
         // The type of settings (how and when they are used).

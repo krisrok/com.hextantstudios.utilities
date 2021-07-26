@@ -236,6 +236,9 @@ namespace Hextant
                 typeof( T ).GetCustomAttribute<SettingsAttribute>( true );
         static SettingsAttribute _attribute;
 
+        internal static string displayPath { get; } = ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
+            ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );
+
         // Called to validate settings changes.
         protected virtual void OnValidate() { }
 

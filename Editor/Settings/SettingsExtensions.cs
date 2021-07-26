@@ -12,12 +12,11 @@ namespace Hextant.Editor
         // and Edit/Project Settings.
         public static SettingsProvider GetSettingsProvider<T>() where T : Settings<T>
         {
-            Debug.Assert( Settings<T>.attribute.displayPath != null );
             var instanceProp = typeof( Settings<T> ).GetProperty( nameof( Settings<T>.instance ), BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic );
             return new ScriptableObjectSettingsProvider( () => (ScriptableObject)instanceProp.GetValue(null),
-                Settings<T>.attribute.usage == SettingsUsage.EditorUser ?
+                Settings<T>.attribute is EditorUserSettingsAttribute ?
                 SettingsScope.User : SettingsScope.Project,
-                Settings<T>.attribute.displayPath );
+                Settings<T>.displayPath );
         }
     }
 }
