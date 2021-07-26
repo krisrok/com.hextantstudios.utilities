@@ -4,11 +4,14 @@ using System;
 
 namespace Hextant
 {
-    // Specifies the settings type, path in the settings UI, and optionally its
-    // filename. If the filename is not set, the type's name is used.
-    public abstract class SettingsAttribute : Attribute
+    /// <summary>
+    /// Abstract base class for Settings attributes.
+    /// Please use its derivates <see cref="RuntimeProjectSettingsAttribute"/>, <see cref="EditorProjectSettingsAttribute"/> and <see cref="EditorUserSettingsAttribute"/> instead.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
+    public abstract class SettingsAttributeBase : Attribute
     {
-        internal SettingsAttribute( SettingsUsage usage, string displayPath = null)
+        internal SettingsAttributeBase( SettingsUsage usage, string displayPath = null)
         {
             this.usage = usage;
             this.displayPath = displayPath;
@@ -24,7 +27,7 @@ namespace Hextant
         public readonly string filename;
     }
 
-    public class RuntimeProjectSettingsAttribute : SettingsAttribute, IRuntimeSettingsAttribute
+    public class RuntimeProjectSettingsAttribute : SettingsAttributeBase, IRuntimeSettingsAttribute
     {
         public RuntimeProjectSettingsAttribute(string displayPath = null )
             : base(SettingsUsage.RuntimeProject, displayPath )
@@ -33,14 +36,14 @@ namespace Hextant
         public bool allowRuntimeFileOverrides { get; set; }
     }
 
-    public class EditorProjectSettingsAttribute : SettingsAttribute
+    public class EditorProjectSettingsAttribute : SettingsAttributeBase
     {
         public EditorProjectSettingsAttribute( string displayPath = null )
             : base( SettingsUsage.EditorProject, displayPath )
         { }
     }
 
-    public class EditorUserSettingsAttribute : SettingsAttribute
+    public class EditorUserSettingsAttribute : SettingsAttributeBase
     {
         public EditorUserSettingsAttribute( string displayPath = null )
             : base( SettingsUsage.EditorUser, displayPath )

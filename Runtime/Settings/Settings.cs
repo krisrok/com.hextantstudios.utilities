@@ -225,10 +225,10 @@ namespace Hextant
         }
 
         // The derived type's [Settings] attribute.
-        public static SettingsAttribute attribute =>
+        public static SettingsAttributeBase attribute =>
             _attribute != null ? _attribute : _attribute =
-                typeof( T ).GetCustomAttribute<SettingsAttribute>( true );
-        static SettingsAttribute _attribute;
+                typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
+        static SettingsAttributeBase _attribute;
 
         internal static string displayPath { get; } = ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
             ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );

@@ -9,7 +9,7 @@ namespace Hextant.Editor
     [CustomPropertyDrawer( typeof( Settings<> ), true )]
     public class ScriptableObjectSettingsDrawer : PropertyDrawer
     {
-        private static Dictionary<Type, SettingsAttribute> _settingsAttributeLookup = new Dictionary<Type, SettingsAttribute>();
+        private static Dictionary<Type, SettingsAttributeBase> _settingsAttributeLookup = new Dictionary<Type, SettingsAttributeBase>();
 
         public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
         {
@@ -58,11 +58,11 @@ namespace Hextant.Editor
             label.tooltip = null;
         }
 
-        private static SettingsAttribute GetSettingsAttribute( Type type )
+        private static SettingsAttributeBase GetSettingsAttribute( Type type )
         {
             if( _settingsAttributeLookup.ContainsKey( type ) == false )
             {
-                return _settingsAttributeLookup[ type ] = type.GetCustomAttributes( typeof( SettingsAttribute ), true ).FirstOrDefault() as SettingsAttribute;
+                return _settingsAttributeLookup[ type ] = type.GetCustomAttributes( typeof( SettingsAttributeBase ), true ).FirstOrDefault() as SettingsAttributeBase;
             }
 
             return _settingsAttributeLookup[ type ];
