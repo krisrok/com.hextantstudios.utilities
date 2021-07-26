@@ -99,6 +99,14 @@ namespace Hextant
             _instance = CreateInstance<T>();
 
 #if UNITY_EDITOR
+            var script = MonoScript.FromScriptableObject( _instance );
+            if( script == null || ( script.name != _instance.GetType().Name ) )
+            {
+                Debug.LogError( $"Cannot create ScriptableObject. Script filename has to match the class name: {_instance.GetType().Name}", _instance );
+                _instance = null;
+                return;
+            }
+
             // Create a new settings instance if it was not found.
             // Create the directory as Unity does not do this itself.
             Directory.CreateDirectory( Path.Combine(
