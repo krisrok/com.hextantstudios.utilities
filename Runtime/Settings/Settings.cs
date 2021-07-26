@@ -27,7 +27,7 @@ namespace Hextant
     {
         // The singleton instance. (Not thread safe but fine for ScriptableObjects.)
         public static T instance => _instance != null ? _instance : Initialize();
-        static T _instance;
+        protected static T _instance;
 
         // Loads or creates the settings instance and stores it in _instance.
         protected static T Initialize()
@@ -62,16 +62,13 @@ namespace Hextant
             if( _instance == null )
                 CreateAsset( path );
 
-            // Load runtime overrides from json file if it's allowed and we're actually in runtime.
-            if( attribute is IRuntimeSettingsAttribute && (attribute as IRuntimeSettingsAttribute ).allowRuntimeFileOverrides
-#if UNITY_EDITOR
-              && EditorApplication.isPlayingOrWillChangePlaymode
-#endif
-            )
-                _instance.TryLoadRuntimeFileOverrides( filename );
+            _instance.InitializeInstance();
 
             return _instance;
         }
+
+        protected virtual void InitializeInstance()
+        { }
 
 #if UNITY_EDITOR
         private static void TryLocateAndMoveAsset( string path )
@@ -118,92 +115,6 @@ namespace Hextant
 #endif
         }
 
-        private static void TryLoadRuntimeFileOverrides( string filename )
-        {
-            var xmlFilename = filename + ".xml";
-            if( File.Exists( xmlFilename ) )
-            {
-                var xml = File.ReadAllText( xmlFilename );
-                var doc = new XmlDocument();
-                doc.LoadXml( xml );
-
-                var json = JsonConvert.SerializeXmlNode( doc, Newtonsoft.Json.Formatting.None, omitRootObject: true );
-
-                CreateRuntimeInstanceWithOverrides( json );
-            }
-
-            var jsonFilename = filename + ".json";
-            if( File.Exists( jsonFilename ) )
-            {
-                var json = File.ReadAllText( jsonFilename );
-
-                CreateRuntimeInstanceWithOverrides( json );
-            }
-        }
-
-        private static void CreateRuntimeInstanceWithOverrides( string json )
-        {
-            var runtimeInstanceName = _instance.name + " (Runtime instance with overrides from file)";
-            var runtimeInstance = ScriptableObject.Instantiate( _instance );
-            runtimeInstance.name = runtimeInstanceName;
-
-            JsonConvert.PopulateObject( json, runtimeInstance );
-
-            _instance = runtimeInstance;
-
-#if UNITY_EDITOR
-            EditorApplication.playModeStateChanged += EditorApplication_playModeStateChanged;
-#endif
-        }
-
-        private static void SaveToJsonFile( string filename )
-        {
-            var jsonFilename = filename + ".json";
-
-            using( var fs = File.CreateText( jsonFilename ) )
-            {
-                fs.Write( JsonConvert.SerializeObject( _instance, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { ContractResolver = UnityEngineObjectContractResolver.instance } ) );
-            }
-        }
-
-        private class UnityEngineObjectContractResolver : DefaultContractResolver
-        {
-            public static UnityEngineObjectContractResolver instance { get; } = new UnityEngineObjectContractResolver();
-
-            private UnityEngineObjectContractResolver() { }
-
-            private static string[] _ignoredMemberNames = new[] { nameof( UnityEngine.Object.name ), nameof( UnityEngine.Object.hideFlags ) };
-
-            protected override JsonProperty CreateProperty( MemberInfo member, MemberSerialization memberSerialization )
-            {
-                var property = base.CreateProperty( member, memberSerialization );
-
-                if( property.Ignored )
-                    return property;
-
-                if( member.DeclaringType == typeof( UnityEngine.Object ) && _ignoredMemberNames.Contains( member.Name ) )
-                    property.Ignored = true;
-
-                return property;
-            }
-        }
-
-        private static void SaveToXmlFile( string filename )
-        {
-            var xmlFilename = filename + ".xml";
-
-            var overrides = new XmlAttributeOverrides();
-            var ignoreAttributes = new XmlAttributes { XmlIgnore = true };
-            overrides.Add( typeof( UnityEngine.Object ), nameof( name ), ignoreAttributes );
-            overrides.Add( typeof( UnityEngine.Object ), nameof( hideFlags ), ignoreAttributes );
-
-            using( var fs = new FileStream( xmlFilename, FileMode.Create ) )
-            {
-                var xs = new XmlSerializer( typeof( T ), overrides );
-                xs.Serialize( fs, _instance );
-            }
-        }
-
         // Returns the full asset path to the settings file.
         static string GetSettingsPath()
         {
@@ -225,10 +136,7 @@ namespace Hextant
         }
 
         // The derived type's [Settings] attribute.
-        public static SettingsAttributeBase attribute =>
-            _attribute != null ? _attribute : _attribute =
-                typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
-        static SettingsAttributeBase _attribute;
+        internal static SettingsAttributeBase attribute { get; } = typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
 
         internal static string displayPath { get; } = ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
             ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );
@@ -257,18 +165,6 @@ namespace Hextant
         {
             var path = Application.dataPath.Split( '/' );
             return path[ path.Length - 2 ];
-        }
-
-        // Check if we are leaving play mode and reinitialize to revert from runtime instance.
-        private static void EditorApplication_playModeStateChanged( PlayModeStateChange stateChange )
-        {
-            if( stateChange != PlayModeStateChange.ExitingPlayMode )
-                return;
-
-            EditorApplication.playModeStateChanged -= EditorApplication_playModeStateChanged;
-
-            _instance = null;
-            Initialize();
         }
 #endif
 

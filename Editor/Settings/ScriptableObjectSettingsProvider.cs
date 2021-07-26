@@ -20,7 +20,7 @@ namespace Hextant.Editor
 
         // The settings instance being edited.
         private ScriptableObject _settings;
-
+        private ISerializableSettings _serializableSettings;
         private bool _isRuntimeInstance;
 
         // Called when the settings are displayed in the UI.
@@ -28,6 +28,7 @@ namespace Hextant.Editor
             UnityEngine.UIElements.VisualElement rootElement )
         {
             _settings = _settingsGetter();
+            _serializableSettings = _settings as ISerializableSettings;
             _isRuntimeInstance = string.IsNullOrEmpty( AssetDatabase.GetAssetPath( _settings ) );
             _editor = Editor.CreateEditor( _settings );
             base.OnActivate( searchContext, rootElement );
@@ -55,17 +56,29 @@ namespace Hextant.Editor
 
             if( _isRuntimeInstance )
             {
-                GUI.Label( EditorGUILayout.GetControlRect(), "Settings are not editable!", EditorStyles.boldLabel );
+                GUI.Label( EditorGUILayout.GetControlRect(), "This is a runtime instance: Settings will NOT be saved!", EditorStyles.boldLabel );
                 GUI.Label( EditorGUILayout.GetControlRect(), "Overrides may have been loaded from file." );
-                EditorGUI.BeginDisabledGroup( true );
                 GUILayout.Space( 10 );
             }
 
             // Draw the editor's GUI.
             _editor.OnInspectorGUI();
 
-            if( _isRuntimeInstance )
-                EditorGUI.EndDisabledGroup();
+            if( _serializableSettings != null )
+            {
+                EditorGUILayout.BeginHorizontal();
+                if( GUILayout.Button( $"Save as .json" ) )
+                {
+                    _serializableSettings.SaveAsJsonFile();
+                }
+                if( GUILayout.Button( $"Load from .json" ) )
+                {
+                    Undo.RecordObject( _settings, "Load from .json" );
+                    _serializableSettings.LoadFromJsonFile();
+                    Undo.FlushUndoRecordObjects();
+                }
+                EditorGUILayout.EndHorizontal();
+            }
 
             // Reset label width and indent.
             GUILayout.EndVertical();
