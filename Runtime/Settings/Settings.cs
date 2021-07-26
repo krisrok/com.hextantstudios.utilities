@@ -48,7 +48,7 @@ namespace Hextant
             var filename = attribute.filename ?? typeof( T ).Name;
             var path = GetSettingsPath() + filename + ".asset";
 
-            if( attribute.usage == SettingsUsage.RuntimeProject )
+            if( attribute is IRuntimeSettingsAttribute )
                 _instance = Resources.Load<T>( filename );
 #if UNITY_EDITOR
             else
@@ -63,12 +63,12 @@ namespace Hextant
                 CreateAsset( path );
 
             // Load runtime overrides from json file if it's allowed and we're actually in runtime.
-            if( attribute.allowRuntimeFileOverrides
+            if( attribute is IRuntimeSettingsAttribute && (attribute as IRuntimeSettingsAttribute ).allowRuntimeFileOverrides
 #if UNITY_EDITOR
               && EditorApplication.isPlayingOrWillChangePlaymode
 #endif
             )
-                TryLoadRuntimeFileOverrides( filename );
+                _instance.TryLoadRuntimeFileOverrides( filename );
 
             return _instance;
         }
@@ -120,12 +120,6 @@ namespace Hextant
 
         private static void TryLoadRuntimeFileOverrides( string filename )
         {
-            if( attribute.usage != SettingsUsage.RuntimeProject )
-            {
-                Debug.LogError( $"{nameof( SettingsAttribute )}.{nameof( SettingsAttribute.allowRuntimeFileOverrides )}=true can only be combined with {nameof( SettingsAttribute.usage )}={SettingsUsage.RuntimeProject}", _instance );
-                return;
-            }
-
             var xmlFilename = filename + ".xml";
             if( File.Exists( xmlFilename ) )
             {
