@@ -10,7 +10,7 @@ namespace Hextant
 {
     public interface ISerializableSettings
     {
-        string SaveAsJsonFile( string filename = null );
+        void SaveAsJsonFile( string filename = null );
         void LoadFromJsonFile( string filename = null );
     }
 
@@ -71,7 +71,7 @@ namespace Hextant
         }
 #endif
 
-        public string SaveAsJsonFile( string filename = null )
+        public void SaveAsJsonFile( string filename = null )
         {
             filename = GetFilenameWithExtension( filename, ".json" );
 
@@ -79,8 +79,6 @@ namespace Hextant
             {
                 fs.Write( JsonConvert.SerializeObject( this, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { ContractResolver = UnityEngineObjectContractResolver.instance } ) );
             }
-
-            return filename;
         }
 
         public void LoadFromJsonFile( string filename = null)
