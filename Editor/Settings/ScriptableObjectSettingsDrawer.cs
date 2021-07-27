@@ -1,21 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
 namespace Hextant.Editor
 {
     [CustomPropertyDrawer( typeof( Settings<> ), true )]
+    [CustomPropertyDrawer( typeof( ISerializableSettings ), true )]
     public class ScriptableObjectSettingsDrawer : PropertyDrawer
     {
         private static Dictionary<Type, SettingsAttributeBase> _settingsAttributeLookup = new Dictionary<Type, SettingsAttributeBase>();
+        private static Dictionary<Type, string> _displayPathLookup = new Dictionary<Type, string>();
 
         public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
         {
             var settingsInstance = ( ( ScriptableObject )property.objectReferenceValue );
 
-            var attribute = GetSettingsAttribute( fieldInfo.FieldType );
+            var fieldType = fieldInfo.FieldType;
+
+            var attribute = GetSettingsAttribute( fieldType );
 
             var textFieldRect = position;
             textFieldRect.width -= 20;
@@ -24,8 +29,7 @@ namespace Hextant.Editor
                 // Jump to project settings
                 if( settingsInstance == null )
                 {
-                    if( attribute != null )
-                        SettingsService.OpenProjectSettings( _settingsAttributeLookup[ fieldInfo.FieldType ].displayPath );
+                    SettingsService.OpenProjectSettings( GetDisplayPath( fieldType ) );
                 }
                 // Or ping the object in project window
                 else
@@ -36,9 +40,9 @@ namespace Hextant.Editor
 
             EditorGUI.PropertyField( position, property, label );
 
-            if( settingsInstance == null && attribute != null)
+            if( settingsInstance == null && attribute != null )
             {
-                var name = attribute?.displayPath;
+                var name = GetDisplayPath( fieldType );
 
                 // Clear ObjectField drawer
                 textFieldRect.xMin += EditorGUIUtility.labelWidth;
@@ -56,6 +60,17 @@ namespace Hextant.Editor
             }
 
             label.tooltip = null;
+        }
+
+        private string GetDisplayPath( Type type )
+        {
+            if( _displayPathLookup.ContainsKey( type ) == false )
+            {
+                var propInfo = type.GetProperty( "displayPath", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.FlattenHierarchy );
+                _displayPathLookup[ type ] = propInfo.GetValue( null ) as string;
+            }
+
+            return _displayPathLookup[ type ];
         }
 
         private static SettingsAttributeBase GetSettingsAttribute( Type type )
