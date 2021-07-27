@@ -56,7 +56,7 @@ namespace Hextant.Editor
 
             if( _isRuntimeInstance )
             {
-                GUI.Label( EditorGUILayout.GetControlRect(), "This is a runtime instance: Settings will NOT be saved!", EditorStyles.boldLabel );
+                GUI.Label( EditorGUILayout.GetControlRect(), "This is a runtime instance: Changes will NOT be saved automatically!", EditorStyles.boldLabel );
                 GUI.Label( EditorGUILayout.GetControlRect(), "Overrides may have been loaded from file." );
                 GUILayout.Space( 10 );
             }
