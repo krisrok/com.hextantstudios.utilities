@@ -66,17 +66,21 @@ namespace Hextant.Editor
 
             if( _serializableSettings != null )
             {
+                GUILayout.Space( 10 );
                 EditorGUILayout.BeginHorizontal();
+
                 if( GUILayout.Button( $"Save as .json" ) )
                 {
                     _serializableSettings.SaveAsJsonFile();
                 }
+
                 if( GUILayout.Button( $"Load from .json" ) )
                 {
                     Undo.RecordObject( _settings, "Load from .json" );
                     _serializableSettings.LoadFromJsonFile();
                     Undo.FlushUndoRecordObjects();
                 }
+
                 EditorGUILayout.EndHorizontal();
             }
 
