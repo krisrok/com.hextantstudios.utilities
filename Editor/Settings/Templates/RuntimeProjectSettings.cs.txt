@@ -1,0 +1,11 @@
+using Hextant;
+using UnityEngine;
+
+[RuntimeProjectSettings("MySettings/#SCRIPTNAME#", allowRuntimeFileOverrides = true)]
+public class #SCRIPTNAME# : SerializableSettings<#SCRIPTNAME#>
+{
+#if UNITY_EDITOR
+    [UnityEditor.SettingsProvider]
+    public static UnityEditor.SettingsProvider GetSettingsProvider() => Hextant.Editor.SettingsExtensions.GetSettingsProvider(() => instance);
+#endif
+}
