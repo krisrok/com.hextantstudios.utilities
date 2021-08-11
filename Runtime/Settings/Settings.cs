@@ -48,14 +48,11 @@ namespace Hextant
             var filename = attribute.filename ?? typeof( T ).Name;
             var path = GetSettingsPath() + filename + ".asset";
 
-            if( attribute is IRuntimeSettingsAttribute )
-                _instance = Resources.Load<T>( filename );
-#if UNITY_EDITOR
-            else
-                _instance = AssetDatabase.LoadAssetAtPath<T>( path );
+            _instance = LoadAsset( filename, path );
 
+#if UNITY_EDITOR
             if( _instance == null )
-                TryLocateAndMoveAsset( path );
+                _instance = TryLocateAndMoveAsset( filename, path );
 #endif
 
             // Create the settings instance if it was not loaded or found.
@@ -67,27 +64,63 @@ namespace Hextant
             return _instance;
         }
 
+        private static T LoadAsset( string filename, string path )
+        {
+            if( attribute is IRuntimeSettingsAttribute )
+                return Resources.Load<T>( filename );
+#if UNITY_EDITOR
+            else
+                return AssetDatabase.LoadAssetAtPath<T>( path );
+#endif
+        }
+
         protected virtual void InitializeInstance()
         { }
 
 #if UNITY_EDITOR
-        private static void TryLocateAndMoveAsset( string path )
+        private static T TryLocateAndMoveAsset( string filename, string path )
         {
             // Move settings if its path changed (type renamed or attribute changed)
             // while the editor was running. This must be done manually if the
             // change was made outside the editor.
-            var instances = Resources.FindObjectsOfTypeAll<T>();
-            if( instances.Length > 0 )
+            var instances = Resources.FindObjectsOfTypeAll<T>()
+                .Where( i => string.IsNullOrEmpty( AssetDatabase.GetAssetPath( i ) ) == false )
+                .ToList();
+
+            if( instances.Count > 0 )
             {
                 var oldPath = AssetDatabase.GetAssetPath( instances[ 0 ] );
-                var result = AssetDatabase.MoveAsset( oldPath, path );
-                if( string.IsNullOrEmpty( result ) )
-                    _instance = instances[ 0 ];
+
+                // check if inside Assets folder: move the asset to the default path, otherwise copy it there
+                if( oldPath.StartsWith( "Assets/" ) )
+                {
+                    var result = AssetDatabase.MoveAsset( oldPath, path );
+                    if( string.IsNullOrEmpty( result ) )
+                        return instances[ 0 ];
+                    else
+                        Debug.LogWarning( $"Failed to move previous settings asset " +
+                            $"'{oldPath}' to '{path}'. " +
+                            $"A new settings asset will be created.", _instance );
+                }
                 else
-                    Debug.LogWarning( $"Failed to move previous settings asset " +
-                        $"'{oldPath}' to '{path}'. " +
-                        $"A new settings asset will be created.", _instance );
+                {
+                    try
+                    {
+                        var clone = ScriptableObject.Instantiate( instances[ 0 ] );
+                        AssetDatabase.CreateAsset( clone, path );
+                        return clone;
+                    }
+                    catch( Exception ex )
+                    {
+                        Debug.LogWarning( $"Failed to copy previous settings asset " +
+                            $"'{oldPath}' to '{path}'. " +
+                            $"A new settings asset will be created." +
+                            $"{ex}", _instance );
+                    }
+                }
             }
+
+            return null;
         }
 #endif
 
