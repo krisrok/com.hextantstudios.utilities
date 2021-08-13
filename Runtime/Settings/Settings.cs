@@ -68,9 +68,11 @@ namespace Hextant
         {
             if( attribute is IRuntimeSettingsAttribute )
                 return Resources.Load<T>( filename );
-#if UNITY_EDITOR
             else
+#if UNITY_EDITOR
                 return AssetDatabase.LoadAssetAtPath<T>( path );
+#else
+               return null;
 #endif
         }
 
