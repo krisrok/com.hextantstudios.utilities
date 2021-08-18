@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -14,8 +16,15 @@ namespace Hextant
         void LoadFromJsonFile( string filename = null );
     }
 
-    public abstract class SerializableSettings<T> : Settings<T>, ISerializableSettings where T : SerializableSettings<T>
+    internal interface IOverridableSettings
     {
+        internal string[] overrideOrigins { get; set; }
+    }
+
+    public abstract class SerializableSettings<T> : Settings<T>, ISerializableSettings, IOverridableSettings where T : SerializableSettings<T>
+    {
+        string[] IOverridableSettings.overrideOrigins { get; set; }
+
         protected override void InitializeInstance()
         {
             var filename = attribute.filename ?? typeof( T ).Name;
@@ -26,35 +35,94 @@ namespace Hextant
                           && EditorApplication.isPlayingOrWillChangePlaymode
 #endif
             )
-                _instance = TryLoadRuntimeFileOverrides( _instance, filename );
+                _instance = LoadRuntimeFileOverrides( _instance, filename );
         }
 
-        internal static T TryLoadRuntimeFileOverrides( T instance, string filename )
+        internal static T LoadRuntimeFileOverrides( T instance, string filename )
         {
+            T runtimeInstance = null;
+
+            var mainJsonFilename = "Settings.json";
+            runtimeInstance = TryLoadOverrides( runtimeInstance, mainJsonFilename, jsonPath: filename );
+
             var jsonFilename = filename + ".json";
-            if( File.Exists( jsonFilename ) )
-            {
-                var json = File.ReadAllText( jsonFilename );
+            runtimeInstance = TryLoadOverrides( runtimeInstance, jsonFilename );
 
-                instance = CreateRuntimeInstanceWithOverridesFromJson( instance, json );
-            }
-
-            return instance;
-        }
-
-        private static T CreateRuntimeInstanceWithOverridesFromJson( T instance, string json )
-        {
-            var runtimeInstanceName = instance.name + " (Runtime instance with overrides)";
-            var runtimeInstance = ScriptableObject.Instantiate( instance );
-            runtimeInstance.name = runtimeInstanceName;
-
-            JsonConvert.PopulateObject( json, runtimeInstance );
+            // return original if there are no successful overrides
+            if( runtimeInstance == null )
+                return instance;
 
 #if UNITY_EDITOR
+            EditorApplication.playModeStateChanged -= EditorApplication_playModeStateChanged;
             EditorApplication.playModeStateChanged += EditorApplication_playModeStateChanged;
 #endif
 
+            var overridableSettings = ( IOverridableSettings )runtimeInstance;
+            var overridesString = $"with overrides from file{( overridableSettings.overrideOrigins.Length > 1 ? "s" : "" )}: {string.Join( ", ", overridableSettings.overrideOrigins )}";
+            Debug.Log( $"Created {typeof( T ).Name} runtime instance {overridesString}" );
+
+            runtimeInstance.name = $"{instance.name} ({overridesString})";
+
             return runtimeInstance;
+        }
+
+        private static T TryLoadOverrides( T runtimeInstance, string jsonFilename, string jsonPath = null )
+        {
+            T localRuntimeInstance = null;
+            try
+            {
+            if( File.Exists( jsonFilename ) )
+            {
+                var json = File.ReadAllText( jsonFilename );
+                    if( jsonPath != null )
+                    {
+                        var jToken = JObject.Parse( json ).SelectToken( jsonPath );
+                        if( jToken == null )
+                            return runtimeInstance;
+
+                        json = jToken.ToString();
+            }
+
+                    if( runtimeInstance == null )
+                        localRuntimeInstance = runtimeInstance = ScriptableObject.Instantiate( _instance );
+
+                    ApplyOverrides( runtimeInstance, json, jsonFilename );
+                    return runtimeInstance;
+                }
+            }
+            catch( Exception ex )
+            {
+                Debug.LogError( $"Error loading overrides from {jsonFilename} for {typeof( T ).Name}\n{ex}" );
+
+                if( localRuntimeInstance )
+                    ScriptableObject.Destroy( localRuntimeInstance );
+        }
+
+            return runtimeInstance;
+        }
+
+        private static void ApplyOverrides( T instance, string json, string origin )
+        {
+            JsonConvert.PopulateObject( json, instance );
+
+            AddOverrideOrigin( instance, origin );
+        }
+
+        private static void AddOverrideOrigin( T instance, string origin )
+        {
+            var oi = ( ( IOverridableSettings )instance );
+            if( oi == null )
+                return;
+
+            List<string> origins;
+            if( oi.overrideOrigins == null )
+                origins = new List<string>();
+            else
+                origins = new List<string>( oi.overrideOrigins );
+
+            origins.Add( origin );
+
+            oi.overrideOrigins = origins.ToArray();
         }
 
 #if UNITY_EDITOR

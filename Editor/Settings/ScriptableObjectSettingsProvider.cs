@@ -21,6 +21,7 @@ namespace Hextant.Editor
         // The settings instance being edited.
         private ScriptableObject _settings;
         private ISerializableSettings _serializableSettings;
+        private IOverridableSettings _overridableSettings;
         private bool _isRuntimeInstance;
 
         // Called when the settings are displayed in the UI.
@@ -29,6 +30,7 @@ namespace Hextant.Editor
         {
             _settings = _settingsGetter();
             _serializableSettings = _settings as ISerializableSettings;
+            _overridableSettings = _settings as IOverridableSettings;
             _isRuntimeInstance = string.IsNullOrEmpty( AssetDatabase.GetAssetPath( _settings ) );
             _editor = Editor.CreateEditor( _settings );
             base.OnActivate( searchContext, rootElement );
@@ -57,7 +59,10 @@ namespace Hextant.Editor
             if( _isRuntimeInstance )
             {
                 GUI.Label( EditorGUILayout.GetControlRect(), "This is a runtime instance: Changes will NOT be saved automatically!", EditorStyles.boldLabel );
-                GUI.Label( EditorGUILayout.GetControlRect(), "Overrides may have been loaded from file." );
+
+                if(_overridableSettings.overrideOrigins != null)
+                    GUI.Label( EditorGUILayout.GetControlRect(), $"Overrides have been loaded from file{(_overridableSettings.overrideOrigins.Length > 1 ? "s" : "")}: {string.Join(", ", _overridableSettings.overrideOrigins)}");
+
                 GUILayout.Space( 10 );
             }
 
