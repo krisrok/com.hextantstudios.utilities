@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
@@ -71,9 +72,9 @@ namespace Hextant
             T localRuntimeInstance = null;
             try
             {
-            if( File.Exists( jsonFilename ) )
-            {
-                var json = File.ReadAllText( jsonFilename );
+                if( File.Exists( jsonFilename ) )
+                {
+                    var json = File.ReadAllText( jsonFilename );
                     if( jsonPath != null )
                     {
                         var jToken = JObject.Parse( json ).SelectToken( jsonPath );
@@ -81,7 +82,7 @@ namespace Hextant
                             return runtimeInstance;
 
                         json = jToken.ToString();
-            }
+                    }
 
                     if( runtimeInstance == null )
                         localRuntimeInstance = runtimeInstance = ScriptableObject.Instantiate( _instance );
@@ -96,7 +97,7 @@ namespace Hextant
 
                 if( localRuntimeInstance )
                     ScriptableObject.Destroy( localRuntimeInstance );
-        }
+            }
 
             return runtimeInstance;
         }
@@ -149,7 +150,7 @@ namespace Hextant
             }
         }
 
-        public void LoadFromJsonFile( string filename = null)
+        public void LoadFromJsonFile( string filename = null )
         {
             filename = GetFilenameWithExtension( filename, ".json" );
 
