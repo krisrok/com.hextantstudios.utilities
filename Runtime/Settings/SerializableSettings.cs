@@ -106,6 +106,10 @@ namespace Hextant
             _syncContext.Post( _ =>
             {
                 LoadOverridesFromAllFiles( _instance );
+
+                var overridableSettings = ( IOverridableSettings )_instance;
+                var overridesString = $"with overrides from file{( overridableSettings.overrideOriginFilePaths.Count > 1 ? "s" : "" )}: {string.Join( ", ", overridableSettings.overrideOriginFilePaths )}";
+                Debug.Log( $"Updated {typeof( T ).Name} runtime instance {overridesString}" );
             }, null );
         }
         #endregion
