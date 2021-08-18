@@ -34,6 +34,7 @@ namespace Hextant
         { }
 
         public bool allowRuntimeFileOverrides { get; set; }
+        public bool allowRuntimeFileWatchers { get; set; }
     }
 
     public class EditorProjectSettingsAttribute : SettingsAttributeBase
@@ -57,5 +58,6 @@ namespace Hextant
         /// Works in conjunction with <see cref="SerializableSettings{T}"/>
         /// </summary>
         bool allowRuntimeFileOverrides { get; set; }
+        bool allowRuntimeFileWatchers { get; set; }
     }
 }

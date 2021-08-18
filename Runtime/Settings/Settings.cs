@@ -45,7 +45,6 @@ namespace Hextant
             }
 
             // Attempt to load the settings asset.
-            var filename = attribute.filename ?? typeof( T ).Name;
             var path = GetSettingsPath() + filename + ".asset";
 
             _instance = LoadAsset( filename, path );
@@ -172,6 +171,7 @@ namespace Hextant
 
         // The derived type's [Settings] attribute.
         internal static SettingsAttributeBase attribute { get; } = typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
+        internal static string filename => attribute.filename ?? typeof( T ).Name;
 
         internal static string displayPath { get; } = ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
             ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );

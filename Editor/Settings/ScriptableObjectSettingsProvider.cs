@@ -60,8 +60,12 @@ namespace Hextant.Editor
             {
                 GUI.Label( EditorGUILayout.GetControlRect(), "This is a runtime instance: Changes will NOT be saved automatically!", EditorStyles.boldLabel );
 
-                if(_overridableSettings.overrideOrigins != null)
-                    GUI.Label( EditorGUILayout.GetControlRect(), $"Overrides have been loaded from file{(_overridableSettings.overrideOrigins.Length > 1 ? "s" : "")}: {string.Join(", ", _overridableSettings.overrideOrigins)}");
+                if( _overridableSettings.overrideOriginFilePaths != null )
+                {
+                    var file_s = $"file{( _overridableSettings.overrideOriginFilePaths.Count > 1 ? "s" : "" )}";
+                    var re_loaded= _overridableSettings.useOriginFileWatchers ? "are being auto-reloaded" : "have been loaded";
+                    GUI.Label( EditorGUILayout.GetControlRect(), $"Overrides {re_loaded} from {file_s}: {string.Join( ", ", _overridableSettings.overrideOriginFilePaths )}" );
+                }
 
                 GUILayout.Space( 10 );
             }
