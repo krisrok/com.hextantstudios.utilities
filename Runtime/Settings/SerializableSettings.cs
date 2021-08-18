@@ -96,7 +96,14 @@ namespace Hextant
                 Debug.LogError( $"Error loading overrides from {jsonFilename} for {typeof( T ).Name}\n{ex}" );
 
                 if( localRuntimeInstance )
+                {
+#if UNITY_EDITOR
+                    if( Application.isPlaying == false )
+                        ScriptableObject.DestroyImmediate( localRuntimeInstance );
+                    else
+#endif
                     ScriptableObject.Destroy( localRuntimeInstance );
+            }
             }
 
             return runtimeInstance;
