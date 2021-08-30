@@ -72,7 +72,7 @@ namespace Hextant
         {
             overridableSettings.useOriginFileWatchers = true;
 
-            _syncContext = SynchronizationContext.Current;
+            Application.onBeforeRender += Application_onBeforeRender;
 
             foreach( var originFilePath in overridableSettings.overrideOriginFilePaths )
             {
@@ -85,6 +85,12 @@ namespace Hextant
                     _originFileWatchers = new List<FileSystemWatcher>();
                 _originFileWatchers.Add( fsw );
             }
+        }
+
+        private static void Application_onBeforeRender()
+        {
+            Application.onBeforeRender -= Application_onBeforeRender;
+            _syncContext = SynchronizationContext.Current;
         }
 
         private static void ClearOriginFileWatchers()
