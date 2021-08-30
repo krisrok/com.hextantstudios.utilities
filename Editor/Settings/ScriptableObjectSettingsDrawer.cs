@@ -13,9 +13,23 @@ namespace Hextant.Editor
     {
         private static Dictionary<Type, SettingsAttributeBase> _settingsAttributeLookup = new Dictionary<Type, SettingsAttributeBase>();
         private static Dictionary<Type, string> _displayPathLookup = new Dictionary<Type, string>();
+        private static bool _isContentInited;
+        private static GUIContent _settingsIcon;
+
+        private static void InitContent()
+        {
+            if( _isContentInited == false )
+                return;
+
+            _isContentInited = true;
+
+            _settingsIcon = EditorGUIUtility.IconContent( "Settings" );
+        }
 
         public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
         {
+            InitContent();
+
             var settingsInstance = ( ( ScriptableObject )property.objectReferenceValue );
 
             var fieldType = fieldInfo.FieldType;
@@ -56,7 +70,7 @@ namespace Hextant.Editor
                 var iconRect = position;
                 iconRect.x += EditorGUIUtility.labelWidth;
                 iconRect.width = iconRect.height;
-                EditorGUI.LabelField( iconRect, EditorGUIUtility.IconContent( "Settings" ) );
+                EditorGUI.LabelField( iconRect, _settingsIcon );
             }
 
             label.tooltip = null;
