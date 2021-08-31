@@ -12,8 +12,6 @@ namespace Hextant.Editor
             var projectPath = Path.GetFullPath( Directory.GetParent( Application.dataPath ).ToString() );
             var templatePath = Path.GetFullPath( Path.Combine( projectPath, AssetDatabase.GUIDToAssetPath( AssetDatabase.FindAssets( "RuntimeProjectSettings.cs" )[ 0 ] ) ) );
 
-            var selectedAssetsPath = AssetDatabase.GetAssetPath( Selection.GetFiltered( typeof( UnityEngine.Object ), SelectionMode.Assets )[ 0 ] );
-
             CreateScriptAsset( templatePath, "Settings.cs" );
         }
 
