@@ -39,8 +39,8 @@ namespace Hextant
             // Verify there was a [Settings] attribute.
             if( attribute == null )
             {
-                Debug.LogError( "[Settings] attribute missing for type: " +
-                    typeof( T ).Name );
+                var availableAttributes = string.Join( ",", new[] { nameof( EditorUserSettingsAttribute ), nameof( EditorProjectSettingsAttribute ), nameof( RuntimeProjectSettingsAttribute ) } );
+                Debug.LogError( $"SettingsAttribute missing for type: { typeof( T ).Name }. Please use either: {availableAttributes}" );
                 return null;
             }
 
