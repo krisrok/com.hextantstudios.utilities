@@ -210,16 +210,22 @@ namespace Hextant
 
         public void SaveAsJsonFile( string filename = null )
         {
+            if( filename == null )
+                filename = SerializableSettings<T>.filename;
+
             filename = GetFilenameWithExtension( filename, ".json" );
 
             using( var fs = File.CreateText( filename ) )
             {
-                fs.Write( JsonConvert.SerializeObject( this, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings { ContractResolver = UnityEngineObjectContractResolver.instance } ) );
+                fs.Write( JsonConvert.SerializeObject( this, Formatting.Indented, new JsonSerializerSettings { ContractResolver = UnityEngineObjectContractResolver.instance } ) );
             }
         }
 
         public void LoadFromJsonFile( string filename = null )
         {
+            if( filename == null )
+                filename = SerializableSettings<T>.filename;
+
             filename = GetFilenameWithExtension( filename, ".json" );
 
             if( File.Exists( filename ) == false )
@@ -231,9 +237,6 @@ namespace Hextant
 
         private static string GetFilenameWithExtension( string filename, string extension )
         {
-            if( filename == null )
-                filename = attribute.filename ?? typeof( T ).Name;
-
             if( filename.EndsWith( extension ) == false )
                 filename += extension;
 
