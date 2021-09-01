@@ -14,6 +14,20 @@ using System.Linq;
 
 namespace Hextant
 {
+    /*
+    internal class MissingSettingsAttributeException : Exception
+    {
+        private string _typeName;
+
+        public MissingSettingsAttributeException( string typeName )
+        {
+            _typeName = typeName;
+        }
+
+        public override string Message => $"{_typeName} inherits from Settings<> but ";
+    }
+    */
+
     internal interface ISettings
     {
         internal string filename { get; }
@@ -36,8 +50,8 @@ namespace Hextant
 
         // The derived type's [Settings] attribute.
         internal static SettingsAttributeBase attribute { get; } = typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
-        internal static string filename => attribute.filename ?? typeof( T ).Name;
-        internal static string displayPath { get; } = ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
+        internal static string filename => attribute?.filename ?? typeof( T ).Name;
+        internal static string displayPath => ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
             ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );
 
         string ISettings.filename => Settings<T>.filename;
@@ -204,7 +218,7 @@ namespace Hextant
         // The directory name of the current project folder.
         static string GetProjectFolderName()
         {
-            return Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            return Path.GetFullPath( Path.Combine( Application.dataPath, ".." ) );
         }
 #endif
 
