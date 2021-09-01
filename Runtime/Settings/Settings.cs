@@ -14,6 +14,11 @@ using System.Linq;
 
 namespace Hextant
 {
+    internal interface ISettings
+    {
+        internal string filename { get; }
+    }
+
     // Base class for project/users settings. Use the [Settings] attribute to
     // specify its usage, display path, and filename.
     // * Settings are stored in Assets/Settings/ folder.
@@ -23,11 +28,19 @@ namespace Hextant
     //   the current project folder so that shallow cloning (symbolic links to
     //   the Assets/ folder) can be used when testing multiplayer games.
     // See: https://HextantStudios.com/unity-custom-settings/
-    public abstract class Settings<T> : ScriptableObject where T : Settings<T>
+    public abstract class Settings<T> : ScriptableObject, ISettings where T : Settings<T>
     {
         // The singleton instance. (Not thread safe but fine for ScriptableObjects.)
         public static T instance => _instance != null ? _instance : Initialize();
         protected static T _instance;
+
+        // The derived type's [Settings] attribute.
+        internal static SettingsAttributeBase attribute { get; } = typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
+        internal static string filename => attribute.filename ?? typeof( T ).Name;
+        internal static string displayPath { get; } = ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
+            ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );
+
+        string ISettings.filename => Settings<T>.filename;
 
         // Loads or creates the settings instance and stores it in _instance.
         protected static T Initialize()
@@ -168,13 +181,6 @@ namespace Hextant
             }
             return path;
         }
-
-        // The derived type's [Settings] attribute.
-        internal static SettingsAttributeBase attribute { get; } = typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
-        internal static string filename => attribute.filename ?? typeof( T ).Name;
-
-        internal static string displayPath { get; } = ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
-            ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );
 
         // Called to validate settings changes.
         protected virtual void OnValidate() { }
