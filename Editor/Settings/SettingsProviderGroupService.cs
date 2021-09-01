@@ -14,35 +14,9 @@ using UnityAssembly = UnityEditor.Compilation.Assembly;
 
 namespace Hextant.Editor
 {
-
     public static class SettingsProviderGroupService
     {
-        private class Cache
-        {
-            public bool NeedsFullScan;
-            public AssemblyInfo[] AssemblyInfos;
-            public string[] ChangedUnknownAssemblyLocations;
-
-            public class AssemblyInfo
-            {
-                public string Location;
-                public string[] TypeNames;
-                public bool NeedsScan;
-
-                public static AssemblyInfo FromScannedAssemblyInfo( ScannedAssemblyInfo sai )
-                {
-                    return new AssemblyInfo
-                    {
-                        Location = GetLocation( sai.Assembly ),
-                        TypeNames = sai.Types
-                            .Select( t => t.Type.FullName )
-                            .ToArray()
-                    };
-                }
-            }
-        }
-
-        private class ScannedAssemblyInfo
+         private class ScannedAssemblyInfo
         {
             public Assembly Assembly;
             public ScannedTypeInfo[] Types;
@@ -63,42 +37,6 @@ namespace Hextant.Editor
             }
         }
 
-        private class AssemblyLocation
-        {
-            public Assembly Assembly;
-            public string Location;
-
-            public static AssemblyLocation FromAssembly( Assembly assembly )
-            {
-                return new AssemblyLocation
-                {
-                    Assembly = assembly,
-                    Location = GetLocation( assembly )
-                };
-            }
-
-            public bool MatchesLocation( Cache.AssemblyInfo cachedAssemblyInfo )
-            {
-                return Location.EndsWith( cachedAssemblyInfo.Location );
-            }
-        }
-
-        private static string GetLocation( Assembly assembly )
-        {
-            return assembly.Location.Replace( '\\', '/' );
-        }
-
-        private static bool _isInited;
-        private static (TypeInfo Type, Attribute Attribute)[] _settingsTypes;
-
-        private static string _projectDirPath => Path.GetFullPath( Path.Combine( Application.dataPath, ".." ) );
-        private static string _cacheFilePath => Path.GetFullPath( Path.Combine( Application.dataPath, "../Library/SettingsAssemblyCache" ) );
-
-        static SettingsProviderGroupService()
-        {
-            CompilationPipeline.assemblyCompilationFinished += CompilationPipeline_assemblyCompilationFinished;
-        }
-
         private static ScannedAssemblyInfo[] _assemblyInfos;
 
         private static ScannedAssemblyInfo[] GetAssemblyInfos()
@@ -112,19 +50,9 @@ namespace Hextant.Editor
             stopwatch.Start();
 #endif
 
-            var assemblyInfos =
-                TryReadCache( out var cache ) && cache.NeedsFullScan == false ?
-                PerformCachedScan( cache ) :
-                PerformFullScan();
+            var assemblyInfos = PerformFullScan();
 
             _assemblyInfos = assemblyInfos.ToArray();
-
-            WriteCache( new Cache
-            {
-                AssemblyInfos = assemblyInfos
-                    .Select( sai => Cache.AssemblyInfo.FromScannedAssemblyInfo( sai ) )
-                    .ToArray()
-            } );
 
 #if SETTINGSPROVIDERGROUPSERVICE_DEBUG
             VerboseLog( $"{nameof( SettingsProviderGroupService )}.{nameof( GetAssemblyInfos )} ran in {stopwatch.Elapsed.TotalSeconds}s" );
@@ -144,55 +72,6 @@ namespace Hextant.Editor
                 .ToArray();
         }
 
-        private static ScannedAssemblyInfo[] PerformCachedScan( Cache cache )
-        {
-            VerboseLog( "Performing a cached scan" );
-
-            try
-            {
-                var referencingAssemblies = GetReferencingAssemblies();
-
-                // cache the locations for easier comparability
-                var assemblyLocations = referencingAssemblies
-                    .Select( a => AssemblyLocation.FromAssembly( a ) )
-                    .ToArray();
-
-                // filter out deleted/renamed/moved assemblies
-                var filteredCachedAssemblyInfos = cache.AssemblyInfos?
-                    .Where( ai => assemblyLocations.Any( al => al.MatchesLocation( ai ) ) )
-                    .ToArray()
-                    ?? new Cache.AssemblyInfo[ 0 ];
-
-                // scan these
-                var changedKnownAssemblyInfos = filteredCachedAssemblyInfos?
-                    .Where( ra => ra.NeedsScan == true )
-                    .Select( ai => ScanCached( assemblyLocations, ai ) )
-                    ?? Enumerable.Empty<ScannedAssemblyInfo>();
-
-                // use the cached types of these
-                var unchangedKnownAssemblyInfos = filteredCachedAssemblyInfos?
-                    .Where( ra => ra.NeedsScan == false )
-                    .Select( ai => ScanCached( assemblyLocations, ai ) )
-                    ?? Enumerable.Empty<ScannedAssemblyInfo>();
-
-                // scan these too
-                var otherChangedAssemblies = cache.ChangedUnknownAssemblyLocations?
-                    .Select( al => assemblyLocations.FirstOrDefault( at => at.Location.EndsWith( al ) ).Assembly )
-                    .Where( a => a != null )
-                    .Select( a => ScanAssembly( a ) )
-                    ?? Enumerable.Empty<ScannedAssemblyInfo>();
-
-                return changedKnownAssemblyInfos
-                    .Concat( unchangedKnownAssemblyInfos )
-                    .Concat( otherChangedAssemblies )
-                    .ToArray();
-            }
-            catch( Exception ex )
-            {
-                Debug.LogException( ex );
-                return null;
-            }
-        }
         private static ScannedAssemblyInfo[] PerformFullScan()
         {
             VerboseLog( "Performing a full scan" );
@@ -204,90 +83,6 @@ namespace Hextant.Editor
                 .ToArray();
 
             return scannedAssemblyInfos;
-        }
-
-        private static void WriteCache( Cache cache )
-        {
-            File.WriteAllText( _cacheFilePath, JsonConvert.SerializeObject( cache ) );
-        }
-
-        private static void CompilationPipeline_assemblyCompilationFinished( string assemblyLocation, CompilerMessage[] arg2 )
-        {
-            if( TryReadCache( out var cache ) )
-            {
-                var isDirty = false;
-                Cache.AssemblyInfo cai;
-                if( ( cai = cache.AssemblyInfos.FirstOrDefault( ai => ai.Location.EndsWith( assemblyLocation ) ) ) != null )
-                {
-                    VerboseLog( "Referenced assembly!" );
-                    cai.NeedsScan = true;
-                    isDirty = true;
-                }
-                else
-                {
-                    VerboseLog( "Unknown assembly!" );
-                    cache.ChangedUnknownAssemblyLocations = new[] { assemblyLocation };
-                    isDirty = true;
-                }
-
-                if( isDirty )
-                    WriteCache( cache );
-            }
-        }
-
-        private static bool TryReadCache( out Cache cache )
-        {
-            cache = default( Cache );
-
-            if( File.Exists( _cacheFilePath ) == false )
-                return false;
-
-            try
-            {
-                cache = JsonConvert.DeserializeObject<Cache>( File.ReadAllText( _cacheFilePath ) );
-                return true;
-            }
-            catch( Exception ex )
-            {
-                Debug.LogError( $"Could not read cache from: {_cacheFilePath}\n{ex}" );
-                return false;
-            }
-        }
-
-        [SettingsProviderGroup]
-        public static SettingsProvider[] CreateProviders()
-        {
-            var assemblyInfos = GetAssemblyInfos();
-
-            var result = new List<SettingsProvider>();
-
-            foreach( var at in assemblyInfos.SelectMany( ai => ai.Types ) )
-            {
-                result.Add( new ScriptableObjectSettingsProvider( () => ( ScriptableObject )at.InstanceProp.GetValue( null ),
-                    at.Attribute is EditorUserSettingsAttribute ?
-                    SettingsScope.User : SettingsScope.Project,
-                    ( string )at.DisplayPathProp.GetValue( null ) ) );
-            }
-
-            return result.ToArray();
-        }
-
-        private static ScannedAssemblyInfo ScanCached( AssemblyLocation[] assemblyLocations, Cache.AssemblyInfo assemblyInfo )
-        {
-            var assembly = assemblyLocations
-                .FirstOrDefault( al => al.MatchesLocation( assemblyInfo ) )
-                .Assembly;
-
-            var types = assemblyInfo.TypeNames
-                .Select( tn => assembly.GetType( tn ) )
-                .Select( t => new ScannedTypeInfo( t ) )
-                .ToArray();
-
-            return new ScannedAssemblyInfo
-            {
-                Assembly = assembly,
-                Types = types
-            };
         }
 
         private static ScannedAssemblyInfo ScanAssembly( Assembly assembly )
@@ -327,6 +122,26 @@ namespace Hextant.Editor
 
             return result;
         }
+
+        [SettingsProviderGroup]
+        public static SettingsProvider[] CreateProviders()
+        {
+            var assemblyInfos = GetAssemblyInfos();
+
+            var result = new List<SettingsProvider>();
+
+            foreach( var at in assemblyInfos.SelectMany( ai => ai.Types ) )
+            {
+                result.Add( new ScriptableObjectSettingsProvider( () => ( ScriptableObject )at.InstanceProp.GetValue( null ),
+                    at.Attribute is EditorUserSettingsAttribute ?
+                    SettingsScope.User : SettingsScope.Project,
+                    ( string )at.DisplayPathProp.GetValue( null ) ) );
+            }
+
+            return result.ToArray();
+        }
+
+
         private static void VerboseLog( string msg )
         {
 #if SETTINGSPROVIDERGROUPSERVICE_DEBUG
