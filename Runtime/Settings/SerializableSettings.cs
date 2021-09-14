@@ -32,7 +32,8 @@ namespace Hextant
         private static readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
         {
             ContractResolver = UnityEngineObjectContractResolver.instance,
-            TypeNameHandling = TypeNameHandling.Auto
+            TypeNameHandling = TypeNameHandling.Auto,
+            Formatting = Formatting.Indented
         };
     
         List<string> IOverridableSettings.overrideOriginFilePaths { get; set; }
@@ -223,7 +224,7 @@ namespace Hextant
 
             using( var fs = File.CreateText( filename ) )
             {
-                fs.Write( JsonConvert.SerializeObject( this, Formatting.Indented, _jsonSerializerSettings ) );
+                fs.Write( JsonConvert.SerializeObject( this, _jsonSerializerSettings ) );
             }
         }
 
