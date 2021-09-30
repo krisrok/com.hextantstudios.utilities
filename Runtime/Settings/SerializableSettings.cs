@@ -143,6 +143,9 @@ namespace Hextant
             T localRuntimeInstance = null;
             try
             {
+                if( Path.IsPathRooted( jsonFilePath ) == false )
+                    jsonFilePath = Path.GetFullPath( Path.Combine( Application.dataPath, "..", jsonFilePath ) );
+
                 if( File.Exists( jsonFilePath ) )
                 {
                     var json = File.ReadAllText( jsonFilePath );
