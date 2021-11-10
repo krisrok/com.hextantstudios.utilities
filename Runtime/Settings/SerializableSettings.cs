@@ -83,7 +83,7 @@ namespace Hextant
 
             foreach( var originFilePath in overridableSettings.overrideOriginFilePaths )
             {
-                var fsw = new FileSystemWatcher( Path.GetDirectoryName( Path.GetFullPath( originFilePath ) ), originFilePath );
+                var fsw = new FileSystemWatcher( Path.GetDirectoryName( Path.GetFullPath( originFilePath ) ), Path.GetFileName(originFilePath) );
                 fsw.NotifyFilter = NotifyFilters.LastWrite;
                 fsw.Changed += OverrideOriginFileChanged;
                 fsw.EnableRaisingEvents = true;
