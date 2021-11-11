@@ -29,13 +29,14 @@ namespace Hextant
         private static List<FileSystemWatcher> _originFileWatchers;
         private static SynchronizationContext _syncContext;
 
+        private static JsonSerializer _jsonSerializer;
         private static readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
         {
             ContractResolver = UnityEngineObjectContractResolver.instance,
             TypeNameHandling = TypeNameHandling.Auto,
             Formatting = Formatting.Indented
         };
-    
+
         List<string> IOverridableSettings.overrideOriginFilePaths { get; set; }
         bool IOverridableSettings.useOriginFileWatchers { get; set; }
 
@@ -148,20 +149,31 @@ namespace Hextant
 
                 if( File.Exists( jsonFilePath ) )
                 {
-                    var json = File.ReadAllText( jsonFilePath );
-                    if( jsonPath != null )
+                    using var jr = new JsonTextReader( File.OpenText( jsonFilePath ) )
                     {
-                        var jToken = JObject.Parse( json ).SelectToken( jsonPath );
-                        if( jToken == null )
-                            return runtimeInstance;
+                        DateParseHandling = DateParseHandling.None
+                    };
 
-                        json = jToken.ToString();
-                    }
+                    JToken jToken = JObject.Load( jr );
+
+                    if( jToken == null )
+                        return runtimeInstance;
+
+                    if( jsonPath != null )
+                        jToken = jToken.SelectToken( jsonPath );
+
+                    if( jToken == null )
+                        return runtimeInstance;
 
                     if( runtimeInstance == null )
                         localRuntimeInstance = runtimeInstance = ScriptableObject.Instantiate( _instance );
 
-                    JsonConvert.PopulateObject( json, runtimeInstance, _jsonSerializerSettings );
+                    if( _jsonSerializer == null )
+                        _jsonSerializer = JsonSerializer.Create( _jsonSerializerSettings );
+
+                    using( var jsonReader = jToken.CreateReader() )
+                        _jsonSerializer.Populate( jsonReader, runtimeInstance );
+
                     AddOverrideOriginFilePath( runtimeInstance, jsonFilePath );
 
                     return runtimeInstance;
