@@ -26,6 +26,17 @@ namespace Hextant.Editor
         private IOverridableSettings _overridableSettings;
         private bool _isRuntimeInstance;
 
+        // True if the keywords set has been built.
+        bool _keywordsBuilt;
+
+        // Cached editor used to render inspector GUI.
+        Editor _editor;
+
+#if ODIN_INSPECTOR
+        private static bool _doneWaitingForOdin;
+        private int _waitingForOdinCounter;
+#endif
+
         // Called when the settings are displayed in the UI.
         public override void OnActivate( string searchContext,
             UnityEngine.UIElements.VisualElement rootElement )
@@ -35,15 +46,26 @@ namespace Hextant.Editor
             _serializableSettings = _settingsScriptableObject as ISerializableSettings;
             _overridableSettings = _settingsScriptableObject as IOverridableSettings;
             _isRuntimeInstance = string.IsNullOrEmpty( AssetDatabase.GetAssetPath( _settingsScriptableObject ) );
-            _editor = Editor.CreateEditor( _settingsScriptableObject );
+
+#if ODIN_INSPECTOR
+            if( _doneWaitingForOdin == false)
+                _waitingForOdinCounter = 1;
+            else
+#endif
+            CreateEditor();
+
             base.OnActivate( searchContext, rootElement );
         }
 
         // Called when the settings are no longer displayed in the UI.
         public override void OnDeactivate()
         {
-            Editor.DestroyImmediate( _editor );
-            _editor = null;
+            if( _editor != null )
+            {
+                Editor.DestroyImmediate( _editor );
+                _editor = null;
+            }
+
             base.OnDeactivate();
         }
 
@@ -96,6 +118,18 @@ namespace Hextant.Editor
         // Displays the settings.
         public override void OnGUI( string searchContext )
         {
+#if ODIN_INSPECTOR
+            // Delay editor creation one frame so to be sure Odin is initialized
+            if(_doneWaitingForOdin == false)
+            {
+                if( _waitingForOdinCounter-- > 0 )
+                    return;
+
+                CreateEditor();
+                _doneWaitingForOdin = true;
+                return;
+            }
+#endif
             if( _settingsGetter == null || _editor == null ) return;
 
             // Set label width and indentation to match other settings.
@@ -142,10 +176,9 @@ namespace Hextant.Editor
             return base.HasSearchInterest( searchContext );
         }
 
-        // True if the keywords set has been built.
-        bool _keywordsBuilt;
-
-        // Cached editor used to render inspector GUI.
-        Editor _editor;
+        private void CreateEditor()
+        {
+            _editor = Editor.CreateEditor( _settingsScriptableObject );
+        }
     }
 }
