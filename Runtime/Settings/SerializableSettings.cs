@@ -29,6 +29,14 @@ namespace Hextant
         private static List<FileSystemWatcher> _originFileWatchers;
         private static SynchronizationContext _syncContext;
 
+        private static JsonSerializer _jsonSerializer;
+        private static readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
+        {
+            ContractResolver = UnityEngineObjectContractResolver.instance,
+            TypeNameHandling = TypeNameHandling.Auto,
+            Formatting = Formatting.Indented
+        };
+
         List<string> IOverridableSettings.overrideOriginFilePaths { get; set; }
         bool IOverridableSettings.useOriginFileWatchers { get; set; }
 
@@ -76,7 +84,7 @@ namespace Hextant
 
             foreach( var originFilePath in overridableSettings.overrideOriginFilePaths )
             {
-                var fsw = new FileSystemWatcher( Path.GetDirectoryName( Path.GetFullPath( originFilePath ) ), originFilePath );
+                var fsw = new FileSystemWatcher( Path.GetDirectoryName( Path.GetFullPath( originFilePath ) ), Path.GetFileName(originFilePath) );
                 fsw.NotifyFilter = NotifyFilters.LastWrite;
                 fsw.Changed += OverrideOriginFileChanged;
                 fsw.EnableRaisingEvents = true;
@@ -136,22 +144,36 @@ namespace Hextant
             T localRuntimeInstance = null;
             try
             {
+                if( Path.IsPathRooted( jsonFilePath ) == false )
+                    jsonFilePath = Path.GetFullPath( Path.Combine( Application.dataPath, "..", jsonFilePath ) );
+
                 if( File.Exists( jsonFilePath ) )
                 {
-                    var json = File.ReadAllText( jsonFilePath );
-                    if( jsonPath != null )
+                    using var jr = new JsonTextReader( File.OpenText( jsonFilePath ) )
                     {
-                        var jToken = JObject.Parse( json ).SelectToken( jsonPath );
-                        if( jToken == null )
-                            return runtimeInstance;
+                        DateParseHandling = DateParseHandling.None
+                    };
 
-                        json = jToken.ToString();
-                    }
+                    JToken jToken = JObject.Load( jr );
+
+                    if( jToken == null )
+                        return runtimeInstance;
+
+                    if( jsonPath != null )
+                        jToken = jToken.SelectToken( jsonPath );
+
+                    if( jToken == null )
+                        return runtimeInstance;
 
                     if( runtimeInstance == null )
                         localRuntimeInstance = runtimeInstance = ScriptableObject.Instantiate( _instance );
 
-                    JsonConvert.PopulateObject( json, runtimeInstance );
+                    if( _jsonSerializer == null )
+                        _jsonSerializer = JsonSerializer.Create( _jsonSerializerSettings );
+
+                    using( var jsonReader = jToken.CreateReader() )
+                        _jsonSerializer.Populate( jsonReader, runtimeInstance );
+
                     AddOverrideOriginFilePath( runtimeInstance, jsonFilePath );
 
                     return runtimeInstance;
@@ -217,7 +239,7 @@ namespace Hextant
 
             using( var fs = File.CreateText( filename ) )
             {
-                fs.Write( JsonConvert.SerializeObject( this, Formatting.Indented, new JsonSerializerSettings { ContractResolver = UnityEngineObjectContractResolver.instance } ) );
+                fs.Write( JsonConvert.SerializeObject( this, _jsonSerializerSettings ) );
             }
         }
 
@@ -232,7 +254,7 @@ namespace Hextant
                 return;
 
             var json = File.ReadAllText( filename );
-            JsonConvert.PopulateObject( json, this );
+            JsonConvert.PopulateObject( json, this, _jsonSerializerSettings );
         }
 
         private static string GetFilenameWithExtension( string filename, string extension )
