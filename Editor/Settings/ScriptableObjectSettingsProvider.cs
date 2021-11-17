@@ -34,7 +34,7 @@ namespace Hextant.Editor
 
 #if ODIN_INSPECTOR
         private static bool _doneWaitingForOdin;
-        private int _waitingForOdinCounter;
+        private bool _waitingForOdin;
 #endif
 
         // Called when the settings are displayed in the UI.
@@ -49,7 +49,7 @@ namespace Hextant.Editor
 
 #if ODIN_INSPECTOR
             if( _doneWaitingForOdin == false)
-                _waitingForOdinCounter = 1;
+                _waitingForOdin = true;
             else
 #endif
             CreateEditor();
@@ -122,11 +122,20 @@ namespace Hextant.Editor
             // Delay editor creation one frame so to be sure Odin is initialized
             if(_doneWaitingForOdin == false)
             {
-                if( _waitingForOdinCounter-- > 0 )
+                if( Event.current.type != EventType.Repaint )
                     return;
 
-                CreateEditor();
-                _doneWaitingForOdin = true;
+                if( _waitingForOdin )
+                {
+                    _waitingForOdin = false;
+                }
+                else
+                {
+                    CreateEditor();
+                    _doneWaitingForOdin = true;
+                }
+
+                Repaint();
                 return;
             }
 #endif
