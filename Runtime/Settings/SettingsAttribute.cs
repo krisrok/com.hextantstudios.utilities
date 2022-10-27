@@ -35,6 +35,7 @@ namespace Hextant
 
         public bool allowRuntimeFileOverrides { get; set; }
         public bool allowRuntimeFileWatchers { get; set; }
+        public bool allowCommandlineArgsOverrides { get; set; }
     }
 
     public class EditorProjectSettingsAttribute : SettingsAttributeBase
@@ -59,5 +60,6 @@ namespace Hextant
         /// </summary>
         bool allowRuntimeFileOverrides { get; set; }
         bool allowRuntimeFileWatchers { get; set; }
+        bool allowCommandlineArgsOverrides { get; set; }
     }
 }

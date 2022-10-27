@@ -156,7 +156,13 @@ namespace Hextant.Editor
                 {
                     var file_s = $"file{( _overridableSettings.overrideOriginFilePaths.Count > 1 ? "s" : "" )}";
                     var re_loaded = _overridableSettings.useOriginFileWatchers ? "are being auto-reloaded" : "have been loaded";
-                    GUI.Label( EditorGUILayout.GetControlRect(), $"Overrides {re_loaded} from {file_s}: {string.Join( ", ", _overridableSettings.overrideOriginFilePaths )}" );
+                    GUI.Label( EditorGUILayout.GetControlRect(), $"Overrides {re_loaded} from {file_s}:" );
+                    EditorGUI.indentLevel++;
+                    foreach(var o in _overridableSettings.overrideOriginFilePaths)
+                    {
+                        GUI.Label( EditorGUILayout.GetControlRect(), o );
+                    }
+                    EditorGUI.indentLevel--;
                 }
 
                 GUILayout.Space( 10 );
