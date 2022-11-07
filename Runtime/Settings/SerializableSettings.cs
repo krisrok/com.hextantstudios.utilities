@@ -283,6 +283,9 @@ namespace Hextant
                 if( member.DeclaringType == typeof( UnityEngine.Object ) && _ignoredMemberNames.Contains( member.Name ) )
                     property.Ignored = true;
 
+                if( property.Writable == false )
+                    property.Ignored = true;
+
                 return property;
             }
         }
