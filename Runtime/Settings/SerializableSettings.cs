@@ -293,7 +293,7 @@ namespace Hextant
                     }
                     else
                     {
-                        if( propertyInfo.GetSetMethod( nonPublic: true ) == null )
+                        if( propertyInfo.GetSetMethod( nonPublic: true ) != null )
                         {
                             // found a setter after all, so we'll set it to be writable
                             property.Writable = true;
