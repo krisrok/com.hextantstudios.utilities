@@ -284,7 +284,27 @@ namespace Hextant
                     property.Ignored = true;
 
                 if( property.Writable == false )
-                    property.Ignored = true;
+                {
+                    var propertyInfo = member as PropertyInfo;
+                    if( propertyInfo.CanWrite == false )
+                    {
+                        // this is most likely an auto-property without any setter
+                        property.Ignored = true;
+                    }
+                    else
+                    {
+                        if( propertyInfo.GetSetMethod( nonPublic: true ) == null )
+                        {
+                            // found a setter after all, so we'll set it to be writable
+                            property.Writable = true;
+                        }
+                        else
+                        {
+                            // otherwise just ignore it
+                            property.Ignored = true;
+                        }
+                    }
+                }
 
                 return property;
             }
