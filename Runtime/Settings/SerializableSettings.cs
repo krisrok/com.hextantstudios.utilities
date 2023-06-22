@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
@@ -345,6 +346,25 @@ namespace Hextant
 
             private static string[] _ignoredMemberNames = new[] { nameof( UnityEngine.Object.name ), nameof( UnityEngine.Object.hideFlags ) };
 
+            protected override List<MemberInfo> GetSerializableMembers( Type objectType )
+            {
+                var members = base.GetSerializableMembers( objectType );
+
+                members.AddRange( GetMissingMembers( objectType, members ) );
+
+                return members;
+            }
+
+            // from https://github.com/jilleJr/Newtonsoft.Json-for-Unity.Converters/blob/master/Packages/Newtonsoft.Json-for-Unity.Converters/UnityConverters/UnityTypeContractResolver.cs
+            private static IEnumerable<MemberInfo> GetMissingMembers( Type type, List<MemberInfo> alreadyAdded )
+            {
+                return type.GetFields( BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy )
+                    .Cast<MemberInfo>()
+                    .Concat( type.GetProperties( BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy ) )
+                    .Where( o => o.GetCustomAttribute<SerializeField>() != null
+                        && !alreadyAdded.Contains( o ) );
+            }
+
             protected override JsonProperty CreateProperty( MemberInfo member, MemberSerialization memberSerialization )
             {
                 var property = base.CreateProperty( member, memberSerialization );
@@ -354,6 +374,40 @@ namespace Hextant
 
                 if( member.DeclaringType == typeof( UnityEngine.Object ) && _ignoredMemberNames.Contains( member.Name ) )
                     property.Ignored = true;
+
+                var propertyInfo = member as PropertyInfo;
+
+                if( member.GetCustomAttribute<SerializeField>() != null )
+                {
+                    property.Ignored = false;
+                    property.Writable = propertyInfo != null ? propertyInfo.CanWrite : true;
+                    property.Readable = propertyInfo != null ? propertyInfo.CanRead : true;
+                    property.HasMemberAttribute = true;
+                }
+                else
+                {
+                    if( property.Writable == false && propertyInfo != null)
+                    {
+                        if( propertyInfo.CanWrite == false )
+                        {
+                            // this is most likely an auto-property without any setter
+                            property.Ignored = true;
+                        }
+                        else
+                        {
+                            if( propertyInfo.GetSetMethod( nonPublic: true ) != null )
+                            {
+                                // found a setter after all, so we'll set it to be writable
+                                property.Writable = true;
+                            }
+                            else
+                            {
+                                // otherwise just ignore it
+                                property.Ignored = true;
+                            }
+                        }
+                    }
+                }
 
                 return property;
             }
