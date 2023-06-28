@@ -14,23 +14,9 @@ using System.Linq;
 
 namespace Hextant
 {
-    /*
-    internal class MissingSettingsAttributeException : Exception
+    internal interface ISettingsInternals
     {
-        private string _typeName;
-
-        public MissingSettingsAttributeException( string typeName )
-        {
-            _typeName = typeName;
-        }
-
-        public override string Message => $"{_typeName} inherits from Settings<> but ";
-    }
-    */
-
-    internal interface ISettings
-    {
-        internal string filename { get; }
+        internal string Filename { get; }
     }
 
     // Base class for project/users settings. Use the [Settings] attribute to
@@ -42,7 +28,7 @@ namespace Hextant
     //   the current project folder so that shallow cloning (symbolic links to
     //   the Assets/ folder) can be used when testing multiplayer games.
     // See: https://HextantStudios.com/unity-custom-settings/
-    public abstract class Settings<T> : ScriptableObject, ISettings where T : Settings<T>
+    public abstract class Settings<T> : ScriptableObject, ISettingsInternals where T : Settings<T>
     {
         // The singleton instance. (Not thread safe but fine for ScriptableObjects.)
         public static T instance => _instance != null ? _instance : Initialize();
@@ -54,7 +40,7 @@ namespace Hextant
         internal static string displayPath => ( attribute.usage == SettingsUsage.EditorUser ? "Preferences/" : "Project/" ) +
             ( attribute.displayPath != null ? attribute.displayPath : typeof( T ).Name );
 
-        string ISettings.filename => Settings<T>.filename;
+        string ISettingsInternals.Filename => Settings<T>.filename;
 
         // Loads or creates the settings instance and stores it in _instance.
         protected static T Initialize()

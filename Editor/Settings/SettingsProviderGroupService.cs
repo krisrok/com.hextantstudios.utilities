@@ -103,7 +103,7 @@ namespace Hextant.Editor
                     continue;
                 }
 
-                if( typeof( ISettings ).IsAssignableFrom( ta.Type ) == false )
+                if( typeof( ISettingsInternals ).IsAssignableFrom( ta.Type ) == false )
                 {
                     Debug.LogError( $"{ta.Type} is decorated with {ta.Attribute.GetType()} but does not inherit from Settings<>!\nPlease remove the attribute or fix the inheritance to e.g. Settings<{ta.Type}>." );
                     continue;

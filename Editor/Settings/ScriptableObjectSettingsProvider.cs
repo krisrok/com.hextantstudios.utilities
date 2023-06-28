@@ -21,7 +21,7 @@ namespace Hextant.Editor
 
         // The settings instance being edited.
         private ScriptableObject _settingsScriptableObject;
-        private ISettings _settings;
+        private ISettingsInternals _settingsInternals;
         private ISerializableSettings _serializableSettings;
         private IOverridableSettings _overridableSettings;
         private bool _isRuntimeInstance;
@@ -42,7 +42,7 @@ namespace Hextant.Editor
             UnityEngine.UIElements.VisualElement rootElement )
         {
             _settingsScriptableObject = _settingsGetter();
-            _settings = _settingsScriptableObject as ISettings;
+            _settingsInternals = _settingsScriptableObject as ISettingsInternals;
             _serializableSettings = _settingsScriptableObject as ISerializableSettings;
             _overridableSettings = _settingsScriptableObject as IOverridableSettings;
             _isRuntimeInstance = string.IsNullOrEmpty( AssetDatabase.GetAssetPath( _settingsScriptableObject ) );
@@ -105,7 +105,7 @@ namespace Hextant.Editor
                 menu.AddItem( new GUIContent( "Save as .json" ), false, () =>
                 {
                     var directory = Path.GetFullPath( Path.Combine( Application.dataPath, ".." ) );
-                    var filename = EditorUtility.SaveFilePanel( $"Save as .json", directory, _settings.filename, "json" );
+                    var filename = EditorUtility.SaveFilePanel( $"Save as .json", directory, _settingsInternals.Filename, "json" );
                     if( string.IsNullOrEmpty( filename ) )
                         return;
 
