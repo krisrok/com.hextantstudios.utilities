@@ -33,9 +33,16 @@ namespace Hextant
             : base(SettingsUsage.RuntimeProject, displayPath )
         { }
 
-        public bool allowRuntimeFileOverrides { get; set; }
-        public bool allowRuntimeFileWatchers { get; set; }
-        public bool allowCommandlineArgsOverrides { get; set; }
+        public OverrideOptions OverrideOptions { get; set; }
+
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead" )]
+        public bool allowRuntimeFileOverrides { get => this.AllowsFileOverrides(); set => OverrideOptions |= OverrideOptions.File; }
+
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead" )]
+        public bool allowRuntimeFileWatchers { get => this.AllowsFileWatchers(); set => OverrideOptions |= OverrideOptions.FileWatcher; }
+
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead" )]
+        public bool allowCommandlineArgsOverrides { get => this.AllowsCommandlineOverrides(); set => OverrideOptions |= OverrideOptions.Commandline; }
     }
 
     public class EditorProjectSettingsAttribute : SettingsAttributeBase
@@ -55,11 +62,35 @@ namespace Hextant
     public interface IRuntimeSettingsAttribute
     {
         /// <summary>
-        /// Set to true to try loading overrides from a <see>filename</see>.json placed in the working directory when entering runtime.
+        /// Set to true to try loading overrides from a <see cref="Settings{T}.filename">filename</see>.json placed in the working directory when entering runtime.
         /// Works in conjunction with <see cref="SerializableSettings{T}"/>
         /// </summary>
+        ///
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         bool allowRuntimeFileOverrides { get; set; }
+
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         bool allowRuntimeFileWatchers { get; set; }
+
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         bool allowCommandlineArgsOverrides { get; set; }
+
+        OverrideOptions OverrideOptions { get; set; }
+    }
+
+    public static class RuntimeSettingsAttributeExtensions
+    {
+        public static bool AllowsFileOverrides( this IRuntimeSettingsAttribute attribute ) => ( attribute.OverrideOptions & OverrideOptions.File ) != 0;
+        public static bool AllowsFileWatchers( this IRuntimeSettingsAttribute attribute ) => ( attribute.OverrideOptions & OverrideOptions.FileWatcher ) != 0;
+        public static bool AllowsCommandlineOverrides( this IRuntimeSettingsAttribute attribute ) => ( attribute.OverrideOptions & OverrideOptions.Commandline ) != 0;
+    }
+
+    [Flags]
+    public enum OverrideOptions
+    {
+        None = 0,
+        File = 1,
+        FileWatcher = File | 2,
+        Commandline = 1 << 2,
     }
 }

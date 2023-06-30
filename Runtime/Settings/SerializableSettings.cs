@@ -44,7 +44,7 @@ namespace Hextant
         protected override void InitializeInstance()
         {
             // Load runtime overrides from json file if it's allowed and we're actually in runtime.
-            if( attribute is IRuntimeSettingsAttribute && ( attribute as IRuntimeSettingsAttribute ).allowRuntimeFileOverrides
+            if( attribute is IRuntimeSettingsAttribute && ( attribute as IRuntimeSettingsAttribute ).AllowsFileOverrides()
 #if UNITY_EDITOR
                           && EditorApplication.isPlayingOrWillChangePlaymode
 #endif
@@ -52,7 +52,7 @@ namespace Hextant
                 _instance = LoadRuntimeFileOverrides();
 
             // Load runtime overrides from commandline if it's allowed and we're actually in runtime.
-            if( attribute is IRuntimeSettingsAttribute && ( attribute as IRuntimeSettingsAttribute ).allowCommandlineArgsOverrides
+            if( attribute is IRuntimeSettingsAttribute && ( attribute as IRuntimeSettingsAttribute ).AllowsCommandlineOverrides()
 #if UNITY_EDITOR
                           && EditorApplication.isPlayingOrWillChangePlaymode
 #endif
@@ -142,7 +142,7 @@ namespace Hextant
 
             runtimeInstance.name = $"{instance.name} ({overridesString})";
 
-            if( ( attribute as IRuntimeSettingsAttribute ).allowRuntimeFileWatchers )
+            if( ( attribute as IRuntimeSettingsAttribute ).AllowsFileWatchers() )
                 SetupOriginFileWatchers( overridableSettings );
 
             return runtimeInstance;
