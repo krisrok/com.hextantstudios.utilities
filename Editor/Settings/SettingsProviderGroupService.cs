@@ -32,7 +32,7 @@ namespace Hextant.Editor
             public ScannedTypeInfo( Type type )
             {
                 Type = type;
-                InstanceProp = type.GetProperty( "instance", BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy );
+                InstanceProp = type.GetProperty( "Instance", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy );
                 DisplayPathProp = type.GetProperty( "displayPath", BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy );
             }
         }
