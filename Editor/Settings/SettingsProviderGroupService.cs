@@ -10,6 +10,10 @@ using Assembly = System.Reflection.Assembly;
 
 namespace Hextant.Editor
 {
+    /// <summary>
+    /// Automatically scans the domain for settings classes,
+    /// creates <see cref="SettingsProvider"/>s and registers them in bulk.
+    /// </summary>
     public static class SettingsProviderGroupService
     {
         private class ScannedAssemblyInfo
