@@ -8,8 +8,6 @@ using UnityEditor;
 using UnityEngine;
 using System.Xml;
 using System.Xml.Serialization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using System.Linq;
 
 namespace Hextant
@@ -30,9 +28,12 @@ namespace Hextant
     // See: https://HextantStudios.com/unity-custom-settings/
     public abstract class Settings<T> : ScriptableObject, ISettingsInternals where T : Settings<T>
     {
+        [Obsolete( "Please use " + nameof( Instance ) + " instead" )]
+        public static T instance => Instance;
         // The singleton instance. (Not thread safe but fine for ScriptableObjects.)
-        public static T instance => _instance != null ? _instance : Initialize();
         protected static T _instance;
+
+        public static T Instance => _instance != null ? _instance : Initialize();
 
         // The derived type's [Settings] attribute.
         internal static SettingsAttributeBase attribute { get; } = typeof( T ).GetCustomAttribute<SettingsAttributeBase>( true );
