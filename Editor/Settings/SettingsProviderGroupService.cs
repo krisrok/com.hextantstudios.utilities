@@ -1,16 +1,12 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 using System.Reflection;
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using UnityEditor.Compilation;
-using System.IO;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using Debug = UnityEngine.Debug;
 using Assembly = System.Reflection.Assembly;
-using UnityAssembly = UnityEditor.Compilation.Assembly;
 
 namespace Hextant.Editor
 {
@@ -32,6 +28,7 @@ namespace Hextant.Editor
             public ScannedTypeInfo( Type type )
             {
                 Type = type;
+                Attribute = type.GetCustomAttribute<SettingsAttributeBase>(inherit: true);
                 InstanceProp = type.GetProperty( "Instance", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy );
                 DisplayPathProp = type.GetProperty( "displayPath", BindingFlags.IgnoreCase | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy );
             }
