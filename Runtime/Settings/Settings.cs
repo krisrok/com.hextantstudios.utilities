@@ -205,7 +205,7 @@ namespace Hextant
         // The directory name of the current project folder.
         static string GetProjectFolderName()
         {
-            return Path.GetFullPath( Path.Combine( Application.dataPath, ".." ) );
+            return new DirectoryInfo(Path.GetFullPath(Path.Combine(Application.dataPath, ".."))).Name;
         }
 #endif
 
