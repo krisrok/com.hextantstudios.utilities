@@ -5,8 +5,14 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
+#if ODIN_INSPECTOR
+using Sirenix.OdinInspector;
+using Sirenix.OdinInspector.Editor;
+#endif
+
 namespace Hextant.Editor
 {
+    
     using Editor = UnityEditor.Editor;
 
     // SettingsProvider helper used to display settings for a ScriptableObject
@@ -31,6 +37,8 @@ namespace Hextant.Editor
 
         // Cached editor used to render inspector GUI.
         Editor _editor;
+        private bool _isOdinEditor;
+        private bool _hasHideMonoScriptAttribute;
 
 #if ODIN_INSPECTOR
         private static bool _doneWaitingForOdin;
@@ -47,6 +55,7 @@ namespace Hextant.Editor
             _overridableSettings = _settingsScriptableObject as IOverridableSettings;
             _isRuntimeInstance = string.IsNullOrEmpty( AssetDatabase.GetAssetPath( _settingsScriptableObject ) );
 
+            _hasHideMonoScriptAttribute = _settingsScriptableObject.GetType().GetCustomAttributes( typeof( HideMonoScriptAttribute ), true ).Length > 0;
 #if ODIN_INSPECTOR
             if( _doneWaitingForOdin == false)
                 _waitingForOdin = true;
@@ -83,14 +92,6 @@ namespace Hextant.Editor
             if( EditorGUI.DropdownButton( dropdownButtonRect, EditorGUIUtility.IconContent( "SaveAs" ), FocusType.Keyboard ) )
             {
                 var menu = new GenericMenu();
-                /*
-                menu.AddItem( new GUIContent( "Load all overrides" ), false, () =>
-                {
-                    Undo.RecordObject( _settingsScriptableObject, "Load all overrides" );
-                    //_serializableSettings.LoadAllOverrides();
-                    Undo.FlushUndoRecordObjects();
-                } );
-                */
                 menu.AddItem( new GUIContent( "Load from .json" ), false, () =>
                 {
                     var directory = Path.GetFullPath( Path.Combine( Application.dataPath, ".." ) );
@@ -147,6 +148,14 @@ namespace Hextant.Editor
             GUILayout.Space( 10 );
             GUILayout.BeginVertical();
             GUILayout.Space( 10 );
+
+            // If rendererd by Unity, manually draw a "Script" field if there is no HideMonoScript attribute.
+            if( _isOdinEditor == false && _hasHideMonoScriptAttribute == false )
+            {
+                EditorGUI.BeginDisabledGroup( true );
+                EditorGUILayout.ObjectField( "Script", MonoScript.FromScriptableObject( _settingsScriptableObject ), _settingsScriptableObject.GetType(), false );
+                EditorGUI.EndDisabledGroup();
+            }
 
             if( _isRuntimeInstance )
             {
@@ -213,6 +222,9 @@ namespace Hextant.Editor
         private void CreateEditor()
         {
             _editor = Editor.CreateEditor( _settingsScriptableObject );
+#if ODIN_INSPECTOR
+            _isOdinEditor = _editor is OdinEditor;
+#endif
         }
     }
 }
