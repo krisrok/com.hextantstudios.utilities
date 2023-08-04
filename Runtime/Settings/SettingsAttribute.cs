@@ -13,18 +13,18 @@ namespace Hextant
     {
         internal SettingsAttributeBase( SettingsUsage usage, string displayPath = null)
         {
-            this.usage = usage;
-            this.displayPath = displayPath;
+            Usage = usage;
+            DisplayPath = displayPath;
         }
 
         // The type of settings (how and when they are used).
-        internal readonly SettingsUsage usage;
+        internal readonly SettingsUsage Usage;
 
         // The display name and optional path in the settings dialog.
-        public readonly string displayPath;
+        public readonly string DisplayPath;
 
         // The filename used to store the settings. If null, the type's name is used.
-        public readonly string filename;
+        public readonly string Filename;
     }
 
     public class RuntimeProjectSettingsAttribute : SettingsAttributeBase, IRuntimeSettingsAttribute
@@ -35,13 +35,13 @@ namespace Hextant
 
         public OverrideOptions OverrideOptions { get; set; }
 
-        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead" )]
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         public bool allowRuntimeFileOverrides { get => this.AllowsFileOverrides(); set => OverrideOptions |= OverrideOptions.File; }
 
-        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead" )]
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         public bool allowRuntimeFileWatchers { get => this.AllowsFileWatchers(); set => OverrideOptions |= OverrideOptions.FileWatcher; }
 
-        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead" )]
+        [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         public bool allowCommandlineArgsOverrides { get => this.AllowsCommandlineOverrides(); set => OverrideOptions |= OverrideOptions.Commandline; }
     }
 
@@ -61,11 +61,7 @@ namespace Hextant
 
     public interface IRuntimeSettingsAttribute
     {
-        /// <summary>
-        /// Set to true to try loading overrides from a <see cref="Settings{T}.filename">filename</see>.json placed in the working directory when entering runtime.
-        /// Works in conjunction with <see cref="SerializableSettings{T}"/>
-        /// </summary>
-        ///
+#pragma warning disable IDE1006 // Naming Styles
         [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         bool allowRuntimeFileOverrides { get; set; }
 
@@ -74,7 +70,12 @@ namespace Hextant
 
         [Obsolete( "Use " + nameof( OverrideOptions ) + " instead." )]
         bool allowCommandlineArgsOverrides { get; set; }
+#pragma warning restore IDE1006 // Naming Styles
 
+        /// <summary>
+        /// Used to configure sources this settings object reads overrides from at runtime.
+        /// Works in conjunction with <see cref="SerializableSettings{T}"/>
+        /// </summary>
         OverrideOptions OverrideOptions { get; set; }
     }
 
@@ -88,9 +89,26 @@ namespace Hextant
     [Flags]
     public enum OverrideOptions
     {
+        /// <summary>
+        /// No overrides will be applied.
+        /// </summary>
         None = 0,
+        /// <summary>
+        /// Overrides will be applied from Settings.json and [ClassName].json at runtime.
+        /// </summary>
         File = 1,
+        /// <summary>
+        /// Overrides will be applied from Settings.json and [ClassName].json at runtime.
+        /// If any relevant json file exists, it will also be watched for changes during runtime.
+        /// </summary>
         FileWatcher = File | 2,
+        /// <summary>
+        /// Overrides will be applied from commandline arguments.
+        /// </summary>
         Commandline = 1 << 2,
+        /// <summary>
+        /// See <see cref="FileWatcher"/> and <see cref="Commandline"/>
+        /// </summary>
+        All = FileWatcher | Commandline
     }
 }

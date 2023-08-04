@@ -167,14 +167,14 @@ namespace Hextant.Editor
 
                 GUILayout.Space( 10 );
 
-                if( _overridableSettings.useOriginFileWatchers )
+                if( _overridableSettings.UseOriginFileWatchers )
                 {
                     GUILayout.Label( $"Filewatchers are active. Beware of the loading order!" );
                 }
 
                 GUILayout.Space( 10 );
 
-                if( _overridableSettings.overrideOrigins != null )
+                if( _overridableSettings.OverrideOrigins != null )
                 {
                     GUILayout.Label( $"Overrides have been loaded in following order:" );
 
@@ -182,9 +182,9 @@ namespace Hextant.Editor
                     GUILayout.Space( 20 );
                     GUILayout.BeginVertical();
 
-                    for( var i = 0; i < _overridableSettings.overrideOrigins.Count; i++ )
+                    for( var i = 0; i < _overridableSettings.OverrideOrigins.Count; i++ )
                     {
-                        var o = _overridableSettings.overrideOrigins[ i ];
+                        var o = _overridableSettings.OverrideOrigins[ i ];
                         GUILayout.Label( $"{i + 1}.: {o.ToString()}" );
                     }
 

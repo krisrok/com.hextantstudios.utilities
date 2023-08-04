@@ -16,9 +16,9 @@ namespace Hextant.Editor
         {
             var instanceProp = typeof( Settings<T> ).GetProperty( nameof( Settings<T>.instance ), BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic );
             return new ScriptableObjectSettingsProvider( () => ( ScriptableObject )instanceProp.GetValue( null ),
-                Settings<T>.attribute is EditorUserSettingsAttribute ?
+                Settings<T>.Attribute is EditorUserSettingsAttribute ?
                 SettingsScope.User : SettingsScope.Project,
-                Settings<T>.displayPath );
+                Settings<T>.DisplayPath );
         }
 
         /// <summary>
@@ -32,9 +32,9 @@ namespace Hextant.Editor
             where T : Settings<T>
         {
             return new ScriptableObjectSettingsProvider( instanceGetter,
-                Settings<T>.attribute is EditorUserSettingsAttribute ?
+                Settings<T>.Attribute is EditorUserSettingsAttribute ?
                 SettingsScope.User : SettingsScope.Project,
-                Settings<T>.displayPath );
+                Settings<T>.DisplayPath );
         }
     }
 }
