@@ -150,21 +150,40 @@ namespace Hextant.Editor
 
             if( _isRuntimeInstance )
             {
-                GUI.Label( EditorGUILayout.GetControlRect(), "This is a runtime instance: Changes will NOT be saved automatically!", EditorStyles.boldLabel );
+                var richTextStyle = new GUIStyle( EditorStyles.label );
+                richTextStyle.richText = true;
 
-                if( _overridableSettings.overrideOriginFilePaths != null )
+                GUILayout.BeginVertical( EditorStyles.helpBox );
+                GUILayout.Label( "This is a <b>runtime</b> instance: Changes will <b>not</b> be saved automatically!", richTextStyle );
+
+                GUILayout.Space( 10 );
+
+                if( _overridableSettings.useOriginFileWatchers )
                 {
-                    var file_s = $"file{( _overridableSettings.overrideOriginFilePaths.Count > 1 ? "s" : "" )}";
-                    var re_loaded = _overridableSettings.useOriginFileWatchers ? "are being auto-reloaded" : "have been loaded";
-                    GUI.Label( EditorGUILayout.GetControlRect(), $"Overrides {re_loaded} from {file_s}:" );
-                    EditorGUI.indentLevel++;
-                    foreach(var o in _overridableSettings.overrideOriginFilePaths)
-                    {
-                        GUI.Label( EditorGUILayout.GetControlRect(), o );
-                    }
-                    EditorGUI.indentLevel--;
+                    GUILayout.Label( $"Filewatchers are active. Beware of the loading order!" );
                 }
 
+                GUILayout.Space( 10 );
+
+                if( _overridableSettings.overrideOrigins != null )
+                {
+                    GUILayout.Label( $"Overrides have been loaded in following order:" );
+
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space( 20 );
+                    GUILayout.BeginVertical();
+
+                    for( var i = 0; i < _overridableSettings.overrideOrigins.Count; i++ )
+                    {
+                        var o = _overridableSettings.overrideOrigins[ i ];
+                        GUILayout.Label( $"{i + 1}.: {o.ToString()}" );
+                    }
+
+                    GUILayout.EndVertical();
+                    GUILayout.EndHorizontal();
+                }
+
+                GUILayout.EndVertical();
                 GUILayout.Space( 10 );
             }
 

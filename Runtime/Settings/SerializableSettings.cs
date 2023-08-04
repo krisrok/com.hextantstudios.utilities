@@ -21,7 +21,7 @@ namespace Hextant
 
     internal interface IOverridableSettings
     {
-        internal List<string> overrideOriginFilePaths { get; set; }
+        internal List<IOverrideOrigin> overrideOrigins { get; set; }
         internal bool useOriginFileWatchers { get; set; }
     }
 
@@ -38,7 +38,7 @@ namespace Hextant
             Formatting = Formatting.Indented
         };
 
-        List<string> IOverridableSettings.overrideOriginFilePaths { get; set; }
+        List<IOverrideOrigin> IOverridableSettings.overrideOrigins { get; set; }
         bool IOverridableSettings.useOriginFileWatchers { get; set; }
 
         protected override void InitializeInstance()
@@ -49,7 +49,7 @@ namespace Hextant
                           && EditorApplication.isPlayingOrWillChangePlaymode
 #endif
             )
-                _instance = LoadRuntimeFileOverrides();
+                _instance = LoadInitialRuntimeFileOverrides();
 
             // Load runtime overrides from commandline if it's allowed and we're actually in runtime.
             if( attribute is IRuntimeSettingsAttribute && ( attribute as IRuntimeSettingsAttribute ).AllowsCommandlineOverrides()
@@ -117,16 +117,16 @@ namespace Hextant
                     using( var jsonReader = root.CreateReader() )
                         _jsonSerializer.Populate( jsonReader, _instance );
 
-                    AddOverrideOriginFilePath( runtimeInstance, settingsArg );
+                    AddCommandlineOverrideOrigin( runtimeInstance, settingsArg );
                 }
             }
 
             return runtimeInstance;
         }
 
-        internal static T LoadRuntimeFileOverrides()
+        internal static T LoadInitialRuntimeFileOverrides()
         {
-            var runtimeInstance = LoadOverridesFromAllFiles();
+            var runtimeInstance = LoadOverridesFromAllFiles( null, fromWatcher: false );
 
             if( runtimeInstance == null )
                 return null;
@@ -137,7 +137,7 @@ namespace Hextant
 #endif
 
             var overridableSettings = ( IOverridableSettings )runtimeInstance;
-            var overridesString = $"with overrides from file{( overridableSettings.overrideOriginFilePaths.Count > 1 ? "s" : "" )}: {string.Join( ", ", overridableSettings.overrideOriginFilePaths )}";
+            var overridesString = $"with overrides from file{( overridableSettings.overrideOrigins.Count > 1 ? "s" : "" )}: {string.Join( ", ", overridableSettings.overrideOrigins )}";
             Debug.Log( $"Created {typeof( T ).Name} runtime instance {overridesString}" );
 
             runtimeInstance.name = $"{instance.name} ({overridesString})";
@@ -155,9 +155,9 @@ namespace Hextant
 
             Application.onBeforeRender += Application_onBeforeRender;
 
-            foreach( var originFilePath in overridableSettings.overrideOriginFilePaths )
+            foreach( var fileOrigins in overridableSettings.overrideOrigins.OfType<FileOverrideOrgin>() )
             {
-                var fsw = new FileSystemWatcher( Path.GetDirectoryName( Path.GetFullPath( originFilePath ) ), Path.GetFileName( originFilePath ) );
+                var fsw = new FileSystemWatcher( Path.GetDirectoryName( Path.GetFullPath( fileOrigins.FilePath ) ), Path.GetFileName( fileOrigins.FilePath ) );
                 fsw.NotifyFilter = NotifyFilters.LastWrite;
                 fsw.Changed += OverrideOriginFileChanged;
                 fsw.EnableRaisingEvents = true;
@@ -192,27 +192,29 @@ namespace Hextant
         {
             _syncContext.Post( _ =>
             {
-                LoadOverridesFromAllFiles( _instance );
+                LoadOverridesFromAllFiles( _instance, fromWatcher: true );
 
                 var overridableSettings = ( IOverridableSettings )_instance;
-                var overridesString = $"with overrides from file{( overridableSettings.overrideOriginFilePaths.Count > 1 ? "s" : "" )}: {string.Join( ", ", overridableSettings.overrideOriginFilePaths )}";
+
+                var filePaths = string.Join( ", ", overridableSettings.overrideOrigins.OfType<FileOverrideOrgin>().Select( foo => foo.FilePath ) );
+                var overridesString = $"with overrides from file{( overridableSettings.overrideOrigins.Count > 1 ? "s" : "" )}: {filePaths}";
                 Debug.Log( $"Updated {typeof( T ).Name} runtime instance {overridesString}" );
             }, null );
         }
         #endregion
 
-        private static T LoadOverridesFromAllFiles( T runtimeInstance = null )
+        private static T LoadOverridesFromAllFiles( T runtimeInstance, bool fromWatcher )
         {
             var mainJsonFilename = "Settings.json";
-            runtimeInstance = LoadOverridesFromFile( runtimeInstance, mainJsonFilename, jsonPath: filename );
+            runtimeInstance = LoadOverridesFromFile( runtimeInstance, mainJsonFilename, fromWatcher, jsonPath: filename );
 
             var jsonFilename = filename + ".json";
-            runtimeInstance = LoadOverridesFromFile( runtimeInstance, jsonFilename );
+            runtimeInstance = LoadOverridesFromFile( runtimeInstance, jsonFilename, fromWatcher );
 
             return runtimeInstance;
         }
 
-        private static T LoadOverridesFromFile( T runtimeInstance, string jsonFilePath, string jsonPath = null )
+        private static T LoadOverridesFromFile( T runtimeInstance, string jsonFilePath, bool fromWatcher, string jsonPath = null )
         {
             T localRuntimeInstance = null;
             try
@@ -247,7 +249,7 @@ namespace Hextant
                     using( var jsonReader = jToken.CreateReader() )
                         _jsonSerializer.Populate( jsonReader, runtimeInstance );
 
-                    AddOverrideOriginFilePath( runtimeInstance, jsonFilePath );
+                    AddFileOverrideOrigin( runtimeInstance, jsonFilePath, fromWatcher );
 
                     return runtimeInstance;
                 }
@@ -270,21 +272,39 @@ namespace Hextant
             return runtimeInstance;
         }
 
-        private static void AddOverrideOriginFilePath( T instance, string filePath )
+        private static void AddFileOverrideOrigin( T instance, string filePath, bool fromWatcher )
         {
             var oi = ( ( IOverridableSettings )instance );
             if( oi == null )
                 return;
 
-            if( oi.overrideOriginFilePaths == null )
-                oi.overrideOriginFilePaths = new List<string>();
-            else
+            if( oi.overrideOrigins == null )
             {
-                if( oi.overrideOriginFilePaths.Contains( filePath ) )
-                    return;
+                oi.overrideOrigins = new List<IOverrideOrigin>();
             }
 
-            oi.overrideOriginFilePaths.Add( filePath );
+            if( fromWatcher )
+            {
+                oi.overrideOrigins.Add( new FileWatcherOverrideOrgin( filePath ) );
+            }
+            else
+            {
+                oi.overrideOrigins.Add( new FileOverrideOrgin( filePath ) );
+            }
+        }
+
+        private static void AddCommandlineOverrideOrigin( T instance, string argument )
+        {
+            var oi = ( ( IOverridableSettings )instance );
+            if( oi == null )
+                return;
+
+            if( oi.overrideOrigins == null )
+            {
+                oi.overrideOrigins = new List<IOverrideOrigin>();
+            }
+
+            oi.overrideOrigins.Add( new CommandlineOverrideOrgin( argument ) );
         }
 
 #if UNITY_EDITOR
