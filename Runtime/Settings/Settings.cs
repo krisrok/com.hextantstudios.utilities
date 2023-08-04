@@ -224,7 +224,7 @@ namespace Hextant
                 setting = value;
 #if UNITY_EDITOR
                 OnValidate();
-                instance.SetDirty();
+                Instance.SetDirty();
 #endif
             }
         }

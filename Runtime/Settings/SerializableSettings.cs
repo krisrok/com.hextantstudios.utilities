@@ -138,7 +138,7 @@ namespace Hextant
             var overridesString = $"with overrides from file{( overridableSettings.overrideOrigins.Count > 1 ? "s" : "" )}: {string.Join( ", ", overridableSettings.overrideOrigins )}";
             Debug.Log( $"Created {typeof( T ).Name} runtime instance {overridesString}" );
 
-            runtimeInstance.name = $"{instance.name} ({overridesString})";
+            runtimeInstance.name = $"{Instance.name} ({overridesString})";
 
             if( ( attribute as IRuntimeSettingsAttribute ).AllowsFileWatchers() )
                 SetupOriginFileWatchers( overridableSettings );
