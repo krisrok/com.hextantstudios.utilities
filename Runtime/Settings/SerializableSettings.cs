@@ -1,12 +1,9 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
@@ -25,7 +22,8 @@ namespace Hextant
         internal bool useOriginFileWatchers { get; set; }
     }
 
-    public abstract class SerializableSettings<T> : Settings<T>, ISerializableSettings, IOverridableSettings where T : SerializableSettings<T>
+    public abstract class SerializableSettings<T> : Settings<T>, ISerializableSettings, IOverridableSettings
+        where T : SerializableSettings<T>
     {
         private static List<FileSystemWatcher> _originFileWatchers;
         private static SynchronizationContext _syncContext;
@@ -328,7 +326,7 @@ namespace Hextant
             if( filename == null )
                 filename = SerializableSettings<T>.filename;
 
-            filename = GetFilenameWithExtension( filename, ".json" );
+            filename = Path.ChangeExtension( filename, ".json" );
 
             using( var fs = File.CreateText( filename ) )
             {
@@ -341,23 +339,13 @@ namespace Hextant
             if( filename == null )
                 filename = SerializableSettings<T>.filename;
 
-            filename = GetFilenameWithExtension( filename, ".json" );
+            filename = Path.ChangeExtension( filename, ".json" );
 
             if( File.Exists( filename ) == false )
                 return;
 
             var json = File.ReadAllText( filename );
             JsonConvert.PopulateObject( json, this, _jsonSerializerSettings );
-        }
-
-        private static string GetFilenameWithExtension( string filename, string extension )
-        {
-            if( filename.EndsWith( extension ) == false )
-                filename += extension;
-
-            return filename;
-        }
-
         }
     }
 }
